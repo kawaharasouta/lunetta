@@ -11,6 +11,9 @@
 #include <rte_hexdump.h>
 #include <rte_ether.h>
 
+#include"include/pkt_io.h"
+
+#if 0
 struct queue_info{
 	int num;
 	struct pkt_queue *head;
@@ -21,6 +24,7 @@ struct pkt_queue {
 	size_t size;
 	struct pkt_queue *next;
 };
+#endif
 
 struct queue_info tx_queue;
 struct queue_info rx_queue;
@@ -33,6 +37,9 @@ int queue_init() {
 }
 
 void tx_queue_push(struct rte_mbuf *mbuf) {
+	if (mbuf == NULL)
+		return;
+
 	tx_queue.num += 1;
 	struct pkt_queue *pkt = (struct pkt_queue *)malloc(sizeof(struct pkt_queue));
 	pkt->mbuf = mbuf;
@@ -42,8 +49,8 @@ void tx_queue_push(struct rte_mbuf *mbuf) {
 		tx_queue.tail = pkt;
 	}
 
-	tail->next = pkt;
-	tail = pkt;
+	tx_queue.tail->next = pkt;
+	tx_queue.tail = pkt;
 }
 
 struct rte_mbuf* tx_queue_pop() {
@@ -60,7 +67,7 @@ struct rte_mbuf* tx_queue_pop() {
 	return ret;
 }
 
-void rx_queue_push(struct rte_buf *mbuf) {
+void rx_queue_push(struct rte_mbuf *mbuf) {
 	rx_queue.num += 1;
 	struct pkt_queue *pkt = (struct pkt_queue *)malloc(sizeof(struct pkt_queue));
 	pkt->mbuf = mbuf;
@@ -69,8 +76,8 @@ void rx_queue_push(struct rte_buf *mbuf) {
 		rx_queue.tail = pkt;
 	}
 
-	tail->next = pkt;
-	tail = pkt;
+	rx_queue.tail->next = pkt;
+	rx_queue.tail = pkt;
 }
 
 struct rte_mbuf* rx_queue_pop() {
@@ -87,10 +94,11 @@ struct rte_mbuf* rx_queue_pop() {
 	return ret;
 }
 
-
+#if 0
 struct port {
   uint8_t port_num;
 }
+#endif
 
 struct rte_mempool *mbuf_pool;
 
@@ -196,14 +204,14 @@ dpdk_init(void){
 
 
 /* Wrapped a function to control port but not practically meaningful. It is expected that name will be assigned port number. */
-port 
-*port_open (const char *name) {
-	port *port;
-	if ((port = malloc(sizeof(*port))) == NULL) {
+struct port 
+*port_open (const uint8_t num) {
+	struct port *port;
+	if ((port = malloc(sizeof(struct port))) == NULL) {
 		perror("malloc");
 		return NULL;
 	}
-	port->port_num = (uint16_t)atoi(name);
+	port->port_num = num;
 	
 	if (port_init(port->port_num) < 0){
 		free(port);
@@ -214,7 +222,7 @@ port
 }
 
 void 
-port_close (port *port) {
+port_close (struct port *port) {
 	printf("close port %u\n", port->port_num);
 	rte_eth_dev_stop(port->port_num);
 	rte_eth_dev_close(port->port_num);
@@ -222,7 +230,7 @@ port_close (port *port) {
 }
 
 void
-rx_pkt (port *port) {
+rx_pkt (struct port *port) {
 	uint16_t nb_ports;
 	uint16_t nport = port->port_num;
 	struct rte_mbuf *bufs[BURST_SIZE];
@@ -234,14 +242,16 @@ rx_pkt (port *port) {
 	int i;
 	for (i = 0; i < nb_rx ; i++) {
 		uint8_t *p = rte_pktmbuf_mtod(bufs[i], uint8_t*);
-		//size_t size = rte_pktmbuf_pkt_len(bufs[i]);
+		size_t size = rte_pktmbuf_pkt_len(bufs[i]);
+
+		rte_hexdump(stdout, "", (const void *)p, size);
   
-		tx_queue_push(bufs[i]);
+		rx_queue_push(bufs[i]);
 	}
 }
 
 size_t
-tx_pkt (port *port) {
+tx_pkt (struct port *port) {
 	struct rte_mbuf *bufs[BURST_SIZE];
 	uint16_t nb_ports;
 	uint16_t nport = port->port_num;
@@ -272,7 +282,7 @@ tx_pkt (port *port) {
 			rte_pktmbuf_free(bufs[num_tx + j]);
 		}
 	}
-	if (num_pkt > 0) {
+	if (num_tx > 0) {
 		return num_tx;
 	}
 	return -1;
