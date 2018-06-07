@@ -11,6 +11,10 @@
 #include <rte_hexdump.h>
 #include <rte_ether.h>
 
+struct port {
+	uint8_t port;
+}
+
 struct rte_mempool *mbuf_pool;
 
 static const struct rte_eth_conf port_conf_default = {
@@ -37,7 +41,7 @@ port_init(uint16_t port)
         return -1;
     }
     
-    /* Configure the Ethernet device. */ 
+    /* Configure the Ethernet port. */ 
     retval = rte_eth_dev_configure(port, rx_rings, tx_rings, &port_conf);
     if (retval != 0) {
         return retval;
@@ -78,7 +82,7 @@ port_init(uint16_t port)
         addr.addr_bytes[2], addr.addr_bytes[3],
         addr.addr_bytes[4], addr.addr_bytes[5]);
     
-    /* Enable RX in promiscuous mode for the Ethernet device. */
+    /* Enable RX in promiscuous mode for the Ethernet port. */
     rte_eth_promiscuous_enable(port);
   
     return 0;
@@ -92,7 +96,7 @@ dpdk_init(void){
     char **pg_name;
 
     pg_name = malloc(sizeof(char *));
-    *pg_name = "microps";
+    *pg_name = "kkk";
     ret = rte_eal_init(1, pg_name);
     if (ret < 0) {
         return -1;
@@ -114,36 +118,36 @@ dpdk_init(void){
 }
 
 
-/* Wrapped a function to control device but not practically meaningful. It is expected that name will be assigned port number. */
-device_t 
-*device_open (const char *name) {
-    device_t *device;
-    if ((device = malloc(sizeof(*device))) == NULL) {
+/* Wrapped a function to control port but not practically meaningful. It is expected that name will be assigned port number. */
+port 
+*port_open (const char *name) {
+    port *port;
+    if ((port = malloc(sizeof(*port))) == NULL) {
         perror("malloc");
         return NULL;
     }
-    device->port = (uint16_t)atoi(name);
+    port->port = (uint16_t)atoi(name);
     
-    if (port_init(device->port) < 0){
-        free(device);
+    if (port_init(port->port) < 0){
+        free(port);
         return NULL;
     }
   
-    return device;
+    return port;
 }
 
 void 
-device_close (device_t *device) {
-    printf("close port %u\n", device->port);
-    rte_eth_dev_stop(device->port);
-    rte_eth_dev_close(device->port);
-    free(device);
+port_close (port *port) {
+    printf("close port %u\n", port->port);
+    rte_eth_dev_stop(port->port);
+    rte_eth_dev_close(port->port);
+    free(port);
 }
 
 void
-rx_pkt (device_t *device, void (*callback)(uint8_t *, size_t), int timeout) {
+rx_pkt (port *port, void (*callback)(uint8_t *, size_t), int timeout) {
     uint16_t nb_ports;
-    uint16_t port = device->port;
+    uint16_t port = port->port;
     struct rte_mbuf *bufs[BURST_SIZE];
     uint16_t nb_rx;
     nb_ports = rte_eth_dev_count();
@@ -160,10 +164,10 @@ rx_pkt (device_t *device, void (*callback)(uint8_t *, size_t), int timeout) {
 }
 
 ssize_t
-tx_pkt (device_t *device, const uint8_t *buffer, size_t length) {
+tx_pkt (port *port, const uint8_t *buffer, size_t length) {
     struct rte_mbuf *bufs[BURST_SIZE];
     uint16_t nb_ports;
-    uint16_t port = device->port;
+    uint16_t port = port->port;
     uint8_t *p;
     nb_ports = rte_eth_dev_count();
   
