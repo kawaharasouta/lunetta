@@ -31,9 +31,16 @@ struct queue_info rx_queue;
 
 int queue_init() {
 	tx_queue.num = 0;
+	tx_queue.head = (struct pkt_queue *)malloc(sizeof(struct pkt_queue *));
 	tx_queue.head = NULL;
+	tx_queue.tail = (struct pkt_queue *)malloc(sizeof(struct pkt_queue *));
+	tx_queue.tail = NULL;
+
 	rx_queue.num = 0;
+	rx_queue.head = (struct pkt_queue *)malloc(sizeof(struct pkt_queue *));
 	rx_queue.head = NULL;
+	rx_queue.tail = (struct pkt_queue *)malloc(sizeof(struct pkt_queue *));
+	rx_queue.tail = NULL;
 }
 
 void tx_queue_push(struct rte_mbuf *mbuf) {
@@ -42,8 +49,11 @@ void tx_queue_push(struct rte_mbuf *mbuf) {
 
 	tx_queue.num += 1;
 	struct pkt_queue *pkt = (struct pkt_queue *)malloc(sizeof(struct pkt_queue));
+	pkt->mbuf = (struct rte_mbuf *)malloc(sizeof(struct pkt_queue *));
 	pkt->mbuf = mbuf;
+	//!it is really wrong
 	pkt->size = rte_pktmbuf_pkt_len(mbuf);
+	pkt->next = (struct pkt_queue *)malloc(sizeof(struct pkt_queue *));
 	if (tx_queue.head == NULL){
 		tx_queue.head = pkt;
 		tx_queue.tail = pkt;
@@ -59,10 +69,11 @@ struct rte_mbuf* tx_queue_pop() {
 	}
 	tx_queue.num -= 1;
 
-	struct rte_mbuf *ret = tx_queue.head->mbuf;
-	struct pkt_queue *dust = tx_queue.head;
+	struct rte_mbuf *ret = (struct rte_mbuf *)malloc(sizeof(struct rte_mbuf *));
+	ret = tx_queue.head->mbuf;
+	//struct pkt_queue *dust = tx_queue.head;
 	tx_queue.head = tx_queue.head->next;
-	free(dust);
+	//free(dust);
 	//if head is NULL, tail can be anything
 	return ret;
 }
@@ -70,7 +81,10 @@ struct rte_mbuf* tx_queue_pop() {
 void rx_queue_push(struct rte_mbuf *mbuf) {
 	rx_queue.num += 1;
 	struct pkt_queue *pkt = (struct pkt_queue *)malloc(sizeof(struct pkt_queue));
+	pkt->mbuf = (struct rte_mbuf *)malloc(sizeof(struct pkt_queue *));
 	pkt->mbuf = mbuf;
+	pkt->size = rte_pktmbuf_pkt_len(mbuf);
+	pkt->next = (struct pkt_queue *)malloc(sizeof(struct pkt_queue *));
 	if (tx_queue.head == NULL){
 		rx_queue.head = pkt;
 		rx_queue.tail = pkt;
@@ -86,10 +100,11 @@ struct rte_mbuf* rx_queue_pop() {
 	}
 	rx_queue.num -= 1;
 
-	struct rte_mbuf *ret = rx_queue.head->mbuf;
-	struct pkt_queue *dust = rx_queue.head;
+	struct rte_mbuf *ret = (struct rte_mbuf *)malloc(sizeof(struct rte_mbuf *));
+	ret = rx_queue.head->mbuf;
+	//struct pkt_queue *dust = rx_queue.head;
 	rx_queue.head = rx_queue.head->next;
-	free(dust);
+	//free(dust);
 	//if head is NULL, tail can be anything
 	return ret;
 }
@@ -198,6 +213,7 @@ dpdk_init(void){
 	if (mbuf_pool == NULL) {
 		return -1;
 	}
+	queue_init();
   
 	return 0;
 }
@@ -241,10 +257,10 @@ rx_pkt (struct port *port) {
 	nb_rx = rte_eth_rx_burst(nport, 0, bufs, BURST_SIZE);
 	int i;
 	for (i = 0; i < nb_rx ; i++) {
-		uint8_t *p = rte_pktmbuf_mtod(bufs[i], uint8_t*);
-		size_t size = rte_pktmbuf_pkt_len(bufs[i]);
+		//uint8_t *p = rte_pktmbuf_mtod(bufs[i], uint8_t*);
+		//size_t size = rte_pktmbuf_pkt_len(bufs[i]);
 
-		rte_hexdump(stdout, "", (const void *)p, size);
+		//rte_hexdump(stdout, "", (const void *)p, size);
   
 		rx_queue_push(bufs[i]);
 	}
@@ -277,11 +293,13 @@ tx_pkt (struct port *port) {
   
 	size_t num_tx;
 	num_tx = rte_eth_tx_burst(nport, 0, bufs, 1);
+#if 0
 	if (num_tx < i){
-		for (uint16_t j = 0; j < i - num_tx; j++){
-			rte_pktmbuf_free(bufs[num_tx + j]);
+		for (uint16_t j = num_tx; j < i; j++){
+			rte_pktmbuf_free(bufs[j]);
 		}
 	}
+#endif
 	if (num_tx > 0) {
 		return num_tx;
 	}
