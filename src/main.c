@@ -20,18 +20,24 @@ int main(int argc, char **argv){
 	struct port *port;
 
 	port = port_open(0);
+	int i;
 
-	for (;;){
+	struct rte_mbuf *mbuf = (struct rte_mbuf *)malloc(sizeof(struct rte_mbuf *));
+	for (i = 0; i < 10; i++){
 		rx_pkt(port);
+		sleep(1);
+	}
+	for (;;){
+		//rx_pkt(port);
 
-		struct rte_mbuf *mbuf = rx_queue_pop();
+		/*struct rte_mbuf **/mbuf = rx_queue_pop();
 		if (mbuf != NULL){
 			uint8_t *p = rte_pktmbuf_mtod(mbuf, uint8_t*);
 			size_t size = rte_pktmbuf_pkt_len(mbuf);
-			rte_hexdump(stdout, "", (const void *)p, size);
+			//rte_hexdump(stdout, "", (const void *)p, size);
 			
 
-			tx_queue_push(mbuf);
+			tx_queue_push(mbuf, size);
 			tx_pkt(port);
 		}
 	}

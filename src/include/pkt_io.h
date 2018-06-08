@@ -11,11 +11,10 @@
 
 struct pkt_queue {
 	struct rte_mbuf *mbuf;
-	size_t size;
+	uint32_t size;
 	struct pkt_queue *next;
 };
 struct queue_info {
-	int num;
 	struct pkt_queue *head;
 	struct pkt_queue *tail;
 };
@@ -27,9 +26,9 @@ extern struct queue_info tx_queue;
 extern struct queue_info rx_queue;
 
 int queue_init();
-void tx_queue_push(struct rte_mbuf *mbuf);
+void tx_queue_push(struct rte_mbuf *mbuf, uint32_t size);
 struct rte_mbuf* tx_queue_pop();
-void rx_queue_push(struct rte_mbuf *mbuf);
+void rx_queue_push(struct rte_mbuf *mbuf, uint32_t size);
 struct rte_mbuf* rx_queue_pop();
 int dpdk_init(void);
 struct port *port_open(uint8_t num);
