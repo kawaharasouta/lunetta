@@ -84,6 +84,7 @@ void rx_queue_push(struct rte_mbuf *mbuf, uint32_t size) {
 	if (tx_queue.head == NULL){
 		rx_queue.head = pkt;
 		rx_queue.tail = pkt;
+		return;
 	}
 
 	rx_queue.tail->next = pkt;
@@ -188,10 +189,8 @@ dpdk_init(void){
 	int ret;
 	unsigned nb_ports;
 	uint16_t portid;  
-	char **pg_name;
+	char *pg_name[] = {"kkk"};
 
-	pg_name = malloc(sizeof(char *));
-	*pg_name = "kkk";
 	ret = rte_eal_init(1, pg_name);
 	if (ret < 0) {
 		return -1;
@@ -316,23 +315,39 @@ int main() {
 	uint16_t nport = port->port_num;
 	struct rte_mbuf *bufs[BURST_SIZE];
 	uint16_t nb_rx;
+	uint16_t nb_tx;
 
 	for (;;){
-	/* Recv burst of RX packets */
-	nb_rx = rte_eth_rx_burst(nport, 0, bufs, BURST_SIZE);
-	int i;
-	for (i = 0; i < nb_rx ; i++) {
-		//uint8_t *p = rte_pktmbuf_mtod(bufs[i], uint8_t*);
-		uint32_t size = rte_pktmbuf_pkt_len(bufs[i]);
+		/* Recv burst of RX packets */
+		nb_rx = rte_eth_rx_burst(nport, 0, bufs, BURST_SIZE);
+		int i;
+		for (i = 0; i < nb_rx ; i++) {
+			//uint8_t *p = rte_pktmbuf_mtod(bufs[i], uint8_t*);
+			uint32_t size = rte_pktmbuf_pkt_len(bufs[i]);
 
-		//rte_hexdump(stdout, "", (const void *)p, size);
-  
-		rx_queue_push(bufs[i], size);
-		struct rte_mbuf *mbuf = (struct rte_mbuf *)malloc(sizeof(struct rte_mbuf *));
-		mbuf = rx_queue_pop();
-		uint8_t *p = rte_pktmbuf_mtod(mbuf, uint8_t*);
-		rte_hexdump(stdout, "", (const void *)p, size);
-	}
+			//rte_hexdump(stdout, "", (const void *)p, size);
+  	
+			rx_queue_push(bufs[i], size);
+		//}
+		//for (int j = 0; j < nb_rx; j++){
+			struct rte_mbuf *mbuf = (struct rte_mbuf *)malloc(sizeof(struct rte_mbuf *));
+			mbuf = rx_queue_pop();
+			uint8_t *p = rte_pktmbuf_mtod(mbuf, uint8_t*);
+			rte_hexdump(stdout, "", (const void *)p, size);
+
+			tx_queue_push(mbuf, size);
+
+			//struct rte_mbuf **tx_mbuf = (struct rte_mbuf **)malloc(sizeof(struct rte_mbuf *) * );
+			struct rte_mbuf *tx_mbuf[BURST_SIZE];
+			tx_mbuf[0] = (struct rte_mbuf *)malloc(sizeof(struct rte_mbuf *));
+
+			tx_mbuf[0] = tx_queue_pop();
+			nb_tx = rte_eth_tx_burst(nport, 0, tx_mbuf, 1);
+
+			//rte_pktmbuf_free(mbuf);
+			//rte_pktmbuf_free(tx_mbuf);
+		}
 	}
 	
+	return 0;
 }
