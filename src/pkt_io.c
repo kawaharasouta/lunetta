@@ -50,15 +50,26 @@ void tx_queue_push(struct rte_mbuf *mbuf, uint32_t size) {
 	pkt->mbuf = mbuf;
 	//!it is really wrong
 	pkt->size = size;
+	pkt->next = NULL;
 	//pkt->next = (struct pkt_queue *)malloc(sizeof(struct pkt_queue *));
+#if 1
 	if (tx_queue.head == NULL){
 		tx_queue.head = pkt;
 		tx_queue.tail = pkt;
 		return;
 	}
-
 	tx_queue.tail->next = pkt;
 	tx_queue.tail = pkt;
+#else
+	if (rx_queue.tail) {
+    rx_queue.tail->next = pkt;
+  }
+  rx_queue.tail = pkt;
+  if (!rx_queue.head){
+    rx_queue.head = pkt;
+  }
+#endif
+	return;
 }
 
 struct rte_mbuf* tx_queue_pop() {
@@ -80,7 +91,9 @@ void rx_queue_push(struct rte_mbuf *mbuf, uint32_t size) {
 	//pkt->mbuf = (struct rte_mbuf *)malloc(sizeof(struct pkt_queue *));
 	pkt->mbuf = mbuf;
 	pkt->size = size;
+	pkt->next = NULL;
 	//pkt->next = (struct pkt_queue *)malloc(sizeof(struct pkt_queue *));
+#if 1
 	if (tx_queue.head == NULL){
 		rx_queue.head = pkt;
 		rx_queue.tail = pkt;
@@ -89,6 +102,16 @@ void rx_queue_push(struct rte_mbuf *mbuf, uint32_t size) {
 
 	rx_queue.tail->next = pkt;
 	rx_queue.tail = pkt;
+#else
+	if (rx_queue.tail) {
+    rx_queue.tail->next = pkt;
+  }
+  rx_queue.tail = pkt;
+  if (!rx_queue.head){
+    rx_queue.head = pkt;
+  }
+#endif
+	return;
 }
 
 struct rte_mbuf* rx_queue_pop() {
@@ -333,10 +356,10 @@ int main() {
 		//for (int j = 0; j < nb_rx; j++){
 			struct rte_mbuf *mbuf;// = (struct rte_mbuf *)malloc(sizeof(struct rte_mbuf *));
 			mbuf = rx_queue_pop();
-			//p = rte_pktmbuf_mtod(mbuf, uint8_t*);
+			p = rte_pktmbuf_mtod(mbuf, uint8_t*);
 			//if (!p)
 			//	printf("p is NULL\n");
-			//rte_hexdump(stdout, "", (const void *)p, size);
+			rte_hexdump(stdout, "", (const void *)p, size);
 
 			//printf("tx_push\n");
 			tx_queue_push(mbuf, size);
