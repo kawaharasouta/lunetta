@@ -20,7 +20,7 @@ struct queue_info{
 	struct pkt_queue *tail;
 };
 struct pkt_queue {
-	struct rte_mbuf *mbuf;	//uint8_t?
+
 	uint32_t size;
 	struct pkt_queue *next;
 };
@@ -32,22 +32,25 @@ struct queue_info rx_queue;
 void queue_init() {
 	tx_queue.head = NULL;
 	tx_queue.tail = NULL;
+	tx_queue.num = 0;
 
 	rx_queue.head = NULL;
 	rx_queue.tail = NULL;
+	rx_queue.num = 0;
 }
 
 void tx_queue_push(struct rte_mbuf *mbuf, uint32_t size) {
 	if (mbuf == NULL)
 		return;
 
+	tx_queue.num += 1;
 	struct pkt_queue *pkt = (struct pkt_queue *)malloc(sizeof(struct pkt_queue));
 	pkt->mbuf = mbuf;
 	//!it is really wrong
 	pkt->size = size;
 	pkt->next = NULL;
 #if 1
-	if (tx_queue.head == NULL){
+	if (!tx_queue.head){
 		tx_queue.head = pkt;
 		tx_queue.tail = pkt;
 		return;
@@ -71,6 +74,7 @@ struct rte_mbuf* tx_queue_pop() {
 		return NULL;
 	}
 
+	tx_queue.num -= 1;
 	struct rte_mbuf *ret;// = (struct rte_mbuf *)malloc(sizeof(struct rte_mbuf *));
 	ret = tx_queue.head->mbuf;
 	//struct pkt_queue *dust = tx_queue.head;
@@ -81,12 +85,16 @@ struct rte_mbuf* tx_queue_pop() {
 }
 
 void rx_queue_push(struct rte_mbuf *mbuf, uint32_t size) {
+	if (mbuf == NULL)
+		return;
+
+	rx_queue.num += 1;
 	struct pkt_queue *pkt = (struct pkt_queue *)malloc(sizeof(struct pkt_queue));
 	pkt->mbuf = mbuf;
 	pkt->size = size;
 	pkt->next = NULL;
 #if 1
-	if (tx_queue.head == NULL){
+	if (!rx_queue.head){
 		rx_queue.head = pkt;
 		rx_queue.tail = pkt;
 		return;
@@ -106,13 +114,15 @@ void rx_queue_push(struct rte_mbuf *mbuf, uint32_t size) {
 	return;
 }
 
-struct rte_mbuf* rx_queue_pop() {
+struct rte_mbuf* rx_queue_pop(uint32_t *size) {
 	if (rx_queue.head == NULL) {
 		return NULL;
 	}
 
+	rx_queue.num -= 1;
 	struct rte_mbuf *ret;// = (struct rte_mbuf *)malloc(sizeof(struct rte_mbuf *));
 	ret = rx_queue.head->mbuf;
+	*size = rx_queue.head->size;
 	//struct pkt_queue *dust = rx_queue.head;
 	rx_queue.head = rx_queue.head->next;
 	//free(dust);
@@ -256,20 +266,19 @@ port_close (struct port *port) {
 
 void
 rx_pkt (struct port *port) {
-	uint16_t nb_ports;
+	//uint16_t nb_ports;
 	uint16_t nport = port->port_num;
 	struct rte_mbuf *bufs[BURST_SIZE];
-	uint16_t nb_rx;
+	uint16_t nb_rx = 0;
+	//uint8_t  *p;
 
 	/* Recv burst of RX packets */
 	nb_rx = rte_eth_rx_burst(nport, 0, bufs, BURST_SIZE);
-	int i;
-	for (i = 0; i < nb_rx ; i++) {
+	for (int i = 0; i < nb_rx ; i++) {
 		//uint8_t *p = rte_pktmbuf_mtod(bufs[i], uint8_t*);
 		uint32_t size = rte_pktmbuf_pkt_len(bufs[i]);
-
+		//p = rte_pktmbuf_mtod(bufs[i], uint8_t*);
 		//rte_hexdump(stdout, "", (const void *)p, size);
-  
 		rx_queue_push(bufs[i], size);
 	}
 }
@@ -277,23 +286,33 @@ rx_pkt (struct port *port) {
 size_t
 tx_pkt (struct port *port) {
 	struct rte_mbuf *bufs[BURST_SIZE];
-	uint16_t nb_ports;
 	uint16_t nport = port->port_num;
-	uint8_t *p;
-	nb_ports = rte_eth_dev_count();
- 
-  int i;
-	for (i = 0; i < BURST_SIZE; i++){
-		bufs[i] = (struct rte_mbuf *)malloc(sizeof(struct rte_mbuf *));
-		bufs[i] = tx_queue_pop();
-		if (bufs[i] == NULL){
-			break;
-		}
-		p = rte_pktmbuf_mtod(bufs[i], uint8_t*);
-		uint32_t size = rte_pktmbuf_pkt_len(bufs[i]);
-		rte_hexdump(stdout, "", (const void *)p, size);
+	int i, j, k;
+	uint32_t pop_num = tx_queue.num;
+	uint16_t nb_tx;
+	//uint8_t *p;
 
+	if (pop_num > 0) {
+		for (i = 0; i < pop_num; i++) {
+			bufs[i] = tx_queue_pop();
+		}
+		nb_tx = rte_eth_tx_burst(nport, 0, bufs, 1);
+		for (j = 0; j < pop_num; j++) {
+			rte_pktmbuf_free(bufs[j]);
+		}
 	}
+ 
+//	for (i = 0; i < BURST_SIZE; i++){
+//		//bufs[i] = (struct rte_mbuf *)malloc(sizeof(struct rte_mbuf *));
+//		bufs[i] = tx_queue_pop();
+//		if (bufs[i] == NULL){
+//			break;
+//		}
+//		//p = rte_pktmbuf_mtod(bufs[i], uint8_t*);
+//		uint32_t size = rte_pktmbuf_pkt_len(bufs[i]);
+//		//rte_hexdump(stdout, "", (const void *)p, size);
+//
+//	}
 	/* Send burst of TX packets */
 	//bufs[0] = rte_pktmbuf_alloc(mbuf_pool);
 	//bufs[0]->pkt_len = length;
@@ -304,8 +323,6 @@ tx_pkt (struct port *port) {
 	//p = rte_pktmbuf_mtod(bufs[0], uint8_t*);
 	//memcpy(p, buffer, length);
   
-	//size_t num_tx;
-	//num_tx = rte_eth_tx_burst(nport, 0, bufs, 1);
 #if 0
 	if (num_tx < i){
 		for (uint16_t j = num_tx; j < i; j++){
@@ -329,39 +346,78 @@ int main() {
 	uint16_t nb_ports;
 	uint16_t nport = port->port_num;
 	struct rte_mbuf *bufs[BURST_SIZE];
+	struct rte_mbuf *tbufs[BURST_SIZE];
 	uint16_t nb_rx;
 	uint16_t nb_tx;
-	uint8_t *p;
+	//uint8_t *p;
 
 	for (;;){
+#if 1
+		rx_pkt(port);
+#else
 		nb_rx = 0;
 		/* Recv burst of RX packets */
 		nb_rx = rte_eth_rx_burst(nport, 0, bufs, BURST_SIZE);
-		int i;
+		int i, j, k;
+		uint32_t pop_size;
 		for (i = 0; i < nb_rx ; i++) {
-			//uint8_t *p = rte_pktmbuf_mtod(bufs[i], uint8_t*);
+			uint8_t *pp = rte_pktmbuf_mtod(bufs[i], uint8_t*);
 			uint32_t size = rte_pktmbuf_pkt_len(bufs[i]);
 
-			//rte_hexdump(stdout, "", (const void *)p, size);
+			//rte_hexdump(stdout, "", (const void *)pp, size);
 			rx_queue_push(bufs[i], size);
-		//}
-		//for (int j = 0; j < nb_rx; j++){
-			struct rte_mbuf *mbuf;// = (struct rte_mbuf *)malloc(sizeof(struct rte_mbuf *));
-			mbuf = rx_queue_pop();
-			p = rte_pktmbuf_mtod(mbuf, uint8_t*);
-			//rte_hexdump(stdout, "", (const void *)p, size);
-
-			tx_queue_push(mbuf, size);
-
-			//struct rte_mbuf **tx_mbuf = (struct rte_mbuf **)malloc(sizeof(struct rte_mbuf *) * );
-			struct rte_mbuf *tx_mbuf;
-			//tx_mbuf[0] = (struct rte_mbuf *)malloc(sizeof(struct rte_mbuf *));
-			tx_mbuf = tx_queue_pop();
-			nb_tx = rte_eth_tx_burst(nport, 0, &tx_mbuf, 1);
-
-			rte_pktmbuf_free(mbuf);
-			rte_pktmbuf_free(tx_mbuf);
 		}
+#endif
+		//if (nb_rx > 0)
+			//printf("-----------\n");
+		//}
+		int j;
+		uint32_t pop_size;
+		int rx_pop_num = rx_queue.num;
+		for (j = 0; j < rx_pop_num; j++){
+			struct rte_mbuf *mbuf;// = (struct rte_mbuf *)malloc(sizeof(struct rte_mbuf *));
+			mbuf = rx_queue_pop(&pop_size);
+			//uint8_t *p = rte_pktmbuf_mtod(mbuf, uint8_t*);
+			//uint32_t size = rte_pktmbuf_pkt_len(bufs[j]);
+			//rte_hexdump(stdout, "", (const void *)p, pop_size);
+	//		p = NULL;
+
+			tx_queue_push(mbuf, pop_size);
+//
+//			//struct rte_mbuf **tx_mbuf = (struct rte_mbuf **)malloc(sizeof(struct rte_mbuf *) * );
+//			struct rte_mbuf *tx_mbuf;
+//			//tx_mbuf[0] = (struct rte_mbuf *)malloc(sizeof(struct rte_mbuf *));
+//			tx_mbuf = tx_queue_pop();
+//			nb_tx = rte_eth_tx_burst(nport, 0, &tx_mbuf, 1);
+//
+//			rte_pktmbuf_free(mbuf);
+//			rte_pktmbuf_free(tx_mbuf);
+		}
+		//if (nb_rx > 0)
+			//printf("==========\n");
+#if 1
+		tx_pkt(port);
+#else
+		int tx_pop_num = tx_queue.num;
+		if (tx_pop_num > 0) {
+			for (k = 0; k < tx_pop_num; k++){
+				tbufs[k] = tx_queue_pop();
+			}
+			nb_tx = rte_eth_tx_burst(nport, 0, tbufs, 1);
+			for (int l = 0; l < tx_pop_num; l++){
+				rte_pktmbuf_free(tbufs[l]);
+			}
+#endif
+//			if ((tx_pop_num > nb_tx)){
+//				for (int t = nb_tx; t < tx_pop_num; t++){
+//					rte_pktmbuf_free(bufs[j]);
+//				}
+//			}
+//		}
+
+
+		//rx_pkt(port);
+		//tx_pkt(port);
 	}
 	
 	return 0;
