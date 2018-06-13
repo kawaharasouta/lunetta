@@ -44,7 +44,7 @@ APP = main
 # all source are stored in SRCS-y
 SRCS-y := pkt_io.c
 
-CFLAGS += -g -O0 -lpthread -pthread 
+CFLAGS += -g -O3 -lpthread -pthread 
 #CFLAGS += $(WERROR_FLAGS)
 
 include $(RTE_SDK)/mk/rte.extapp.mk
