@@ -28,7 +28,7 @@ struct pkt_queue {
 
 struct queue_info tx_queue;
 struct queue_info rx_queue;
-
+#if 0
 void queue_init() {
 	tx_queue.head = NULL;
 	tx_queue.tail = NULL;
@@ -37,6 +37,47 @@ void queue_init() {
 	rx_queue.head = NULL;
 	rx_queue.tail = NULL;
 	rx_queue.num = 0;
+
+	allocate_pool_brk();
+}
+#endif
+
+/* Memory management. allocate_pool is not necessary to be global. */
+struct allocate_pool {
+	uint16_t num;
+	struct pkt_queue *head;
+} allocate_pool;
+void allocate_pool_brk() {
+	allocate_pool.head = (struct pkt_queue *)malloc(sizeof(struct pkt_queue) * 1);
+	allocate_pool.num = 1;
+}
+struct pkt_queue* allocate_pkt_queue() {
+	if (allocate_pool.num <= 0) {
+		allocate_pool_brk();
+	}
+#if 1
+	struct pkt_queue *ret = allocate_pool.head;
+	//allocate_pool.head += sizeof(struct allocate_pool *);
+	allocate_pool.head++;
+	allocate_pool.num -= 1;
+	return ret;
+#else
+	uint16_t index = allocate_pool.num;
+	allocate_pool.num -= 1;
+	return &allocate_pool.head[index];
+#endif
+}
+/*************************************/
+void queue_init() {
+	tx_queue.head = NULL;
+	tx_queue.tail = NULL;
+	tx_queue.num = 0;
+
+	rx_queue.head = NULL;
+	rx_queue.tail = NULL;
+	rx_queue.num = 0;
+
+	allocate_pool_brk();
 }
 
 void tx_queue_push(struct rte_mbuf *mbuf, uint32_t size) {
@@ -44,7 +85,8 @@ void tx_queue_push(struct rte_mbuf *mbuf, uint32_t size) {
 		return;
 
 	tx_queue.num += 1;
-	struct pkt_queue *pkt = (struct pkt_queue *)malloc(sizeof(struct pkt_queue));
+	//struct pkt_queue *pkt = (struct pkt_queue *)malloc(sizeof(struct pkt_queue));
+	struct pkt_queue *pkt = allocate_pkt_queue();
 	pkt->mbuf = mbuf;
 	//!it is really wrong
 	pkt->size = size;
@@ -77,9 +119,9 @@ struct rte_mbuf* tx_queue_pop() {
 	tx_queue.num -= 1;
 	struct rte_mbuf *ret;// = (struct rte_mbuf *)malloc(sizeof(struct rte_mbuf *));
 	ret = tx_queue.head->mbuf;
-	//struct pkt_queue *dust = tx_queue.head;
+	struct pkt_queue *dust = tx_queue.head;
 	tx_queue.head = tx_queue.head->next;
-	//free(dust);
+	//free((struct pkt_queue *)dust);
 	//if head is NULL, tail can be anything
 	return ret;
 }
@@ -89,7 +131,8 @@ void rx_queue_push(struct rte_mbuf *mbuf, uint32_t size) {
 		return;
 
 	rx_queue.num += 1;
-	struct pkt_queue *pkt = (struct pkt_queue *)malloc(sizeof(struct pkt_queue));
+	//struct pkt_queue *pkt = (struct pkt_queue *)malloc(sizeof(struct pkt_queue));
+	struct pkt_queue *pkt = allocate_pkt_queue();
 	pkt->mbuf = mbuf;
 	pkt->size = size;
 	pkt->next = NULL;
@@ -123,9 +166,9 @@ struct rte_mbuf* rx_queue_pop(uint32_t *size) {
 	struct rte_mbuf *ret;// = (struct rte_mbuf *)malloc(sizeof(struct rte_mbuf *));
 	ret = rx_queue.head->mbuf;
 	*size = rx_queue.head->size;
-	//struct pkt_queue *dust = rx_queue.head;
+	struct pkt_queue *dust = rx_queue.head;
 	rx_queue.head = rx_queue.head->next;
-	//free(dust);
+	//free((struct pkt_queue *)dust);
 	//if head is NULL, tail can be anything
 	return ret;
 }
@@ -377,8 +420,8 @@ int main() {
 		for (j = 0; j < rx_pop_num; j++){
 			struct rte_mbuf *mbuf;// = (struct rte_mbuf *)malloc(sizeof(struct rte_mbuf *));
 			mbuf = rx_queue_pop(&pop_size);
-			//uint8_t *p = rte_pktmbuf_mtod(mbuf, uint8_t*);
-			//uint32_t size = rte_pktmbuf_pkt_len(bufs[j]);
+			uint8_t *p = rte_pktmbuf_mtod(mbuf, uint8_t*);
+			uint32_t size = rte_pktmbuf_pkt_len(bufs[j]);
 			//rte_hexdump(stdout, "", (const void *)p, pop_size);
 	//		p = NULL;
 
