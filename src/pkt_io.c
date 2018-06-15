@@ -45,22 +45,31 @@ void queue_init() {
 /* Memory management. allocate_pool is not necessary to be global. */
 struct allocate_pool {
 	uint16_t num;
-	struct pkt_queue *head;
+	//struct pkt_queue *head;
+	struct pkt_queue *head[1000];
 } allocate_pool;
 void allocate_pool_brk() {
-	allocate_pool.head = (struct pkt_queue *)malloc(sizeof(struct pkt_queue) * 1);
-	allocate_pool.num = 1;
+	//allocate_pool.head = (struct pkt_queue *)malloc(sizeof(struct pkt_queue) * 2);
+
+	//struct pkt_queue *pool = (struct pkt_queue *)malloc(sizeof(struct pkt_queue) * 2);
+	//*allocate_pool.head = pool;
+
+	//allocate_pool.head = (struct pkt_queue **)malloc(sizeof(struct pkt_queue *) * 1000);
+	for (int i = 0; i < 1000; i++){
+		allocate_pool.head[i] = (struct pkt_queue *)malloc(sizeof(struct pkt_queue *));
+	}
+	allocate_pool.num = 1000;
 }
 struct pkt_queue* allocate_pkt_queue() {
 	if (allocate_pool.num <= 0) {
 		allocate_pool_brk();
 	}
 #if 1
-	struct pkt_queue *ret = allocate_pool.head;
+	//struct pkt_queue *ret = *allocate_pool.head;
 	//allocate_pool.head += sizeof(struct allocate_pool *);
-	allocate_pool.head++;
-	allocate_pool.num -= 1;
-	return ret;
+	//allocate_pool.head++;
+	allocate_pool.num--;
+	return allocate_pool.head[/*(500 - 1) - */allocate_pool.num];
 #else
 	uint16_t index = allocate_pool.num;
 	allocate_pool.num -= 1;
@@ -121,7 +130,7 @@ struct rte_mbuf* tx_queue_pop() {
 	ret = tx_queue.head->mbuf;
 	struct pkt_queue *dust = tx_queue.head;
 	tx_queue.head = tx_queue.head->next;
-	//free((struct pkt_queue *)dust);
+	free((struct pkt_queue *)dust);
 	//if head is NULL, tail can be anything
 	return ret;
 }
@@ -168,7 +177,7 @@ struct rte_mbuf* rx_queue_pop(uint32_t *size) {
 	*size = rx_queue.head->size;
 	struct pkt_queue *dust = rx_queue.head;
 	rx_queue.head = rx_queue.head->next;
-	//free((struct pkt_queue *)dust);
+	free((struct pkt_queue *)dust);
 	//if head is NULL, tail can be anything
 	return ret;
 }
@@ -422,7 +431,7 @@ int main() {
 			mbuf = rx_queue_pop(&pop_size);
 			uint8_t *p = rte_pktmbuf_mtod(mbuf, uint8_t*);
 			uint32_t size = rte_pktmbuf_pkt_len(bufs[j]);
-			//rte_hexdump(stdout, "", (const void *)p, pop_size);
+			rte_hexdump(stdout, "", (const void *)p, pop_size);
 	//		p = NULL;
 
 			tx_queue_push(mbuf, pop_size);
