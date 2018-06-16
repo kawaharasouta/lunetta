@@ -28,19 +28,6 @@ struct pkt_queue {
 
 struct queue_info tx_queue;
 struct queue_info rx_queue;
-#if 0
-void queue_init() {
-	tx_queue.head = NULL;
-	tx_queue.tail = NULL;
-	tx_queue.num = 0;
-
-	rx_queue.head = NULL;
-	rx_queue.tail = NULL;
-	rx_queue.num = 0;
-
-	allocate_pool_brk();
-}
-#endif
 
 /* Memory management. allocate_pool is not necessary to be global. */
 struct allocate_pool {
@@ -68,6 +55,7 @@ struct pkt_queue* allocate_pkt_queue() {
 	//struct pkt_queue *ret = *allocate_pool.head;
 	//allocate_pool.head += sizeof(struct allocate_pool *);
 	//allocate_pool.head++;
+	//return ret;
 	allocate_pool.num--;
 	return allocate_pool.head[/*(500 - 1) - */allocate_pool.num];
 #else
@@ -94,8 +82,8 @@ void tx_queue_push(struct rte_mbuf *mbuf, uint32_t size) {
 		return;
 
 	tx_queue.num += 1;
-	//struct pkt_queue *pkt = (struct pkt_queue *)malloc(sizeof(struct pkt_queue));
-	struct pkt_queue *pkt = allocate_pkt_queue();
+	struct pkt_queue *pkt = (struct pkt_queue *)malloc(sizeof(struct pkt_queue));
+	//struct pkt_queue *pkt = allocate_pkt_queue();
 	pkt->mbuf = mbuf;
 	//!it is really wrong
 	pkt->size = size;
@@ -140,8 +128,8 @@ void rx_queue_push(struct rte_mbuf *mbuf, uint32_t size) {
 		return;
 
 	rx_queue.num += 1;
-	//struct pkt_queue *pkt = (struct pkt_queue *)malloc(sizeof(struct pkt_queue));
-	struct pkt_queue *pkt = allocate_pkt_queue();
+	struct pkt_queue *pkt = (struct pkt_queue *)malloc(sizeof(struct pkt_queue));
+	//struct pkt_queue *pkt = allocate_pkt_queue();
 	pkt->mbuf = mbuf;
 	pkt->size = size;
 	pkt->next = NULL;
