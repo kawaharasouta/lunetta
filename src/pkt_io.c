@@ -82,8 +82,8 @@ void tx_queue_push(struct rte_mbuf *mbuf, uint32_t size) {
 		return;
 
 	tx_queue.num += 1;
-	struct pkt_queue *pkt = (struct pkt_queue *)malloc(sizeof(struct pkt_queue));
-	//struct pkt_queue *pkt = allocate_pkt_queue();
+	//struct pkt_queue *pkt = (struct pkt_queue *)malloc(sizeof(struct pkt_queue));
+	struct pkt_queue *pkt = allocate_pkt_queue();
 	pkt->mbuf = mbuf;
 	//!it is really wrong
 	pkt->size = size;
@@ -128,8 +128,8 @@ void rx_queue_push(struct rte_mbuf *mbuf, uint32_t size) {
 		return;
 
 	rx_queue.num += 1;
-	struct pkt_queue *pkt = (struct pkt_queue *)malloc(sizeof(struct pkt_queue));
-	//struct pkt_queue *pkt = allocate_pkt_queue();
+	//struct pkt_queue *pkt = (struct pkt_queue *)malloc(sizeof(struct pkt_queue));
+	struct pkt_queue *pkt = allocate_pkt_queue();
 	pkt->mbuf = mbuf;
 	pkt->size = size;
 	pkt->next = NULL;
