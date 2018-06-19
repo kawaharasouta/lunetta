@@ -377,6 +377,80 @@ tx_pkt (struct port *port) {
 	return 0;
 }
 
+
+//static/* __attribute__((noreturn))*/ void
+void lcore_txmain(struct port *port) {
+	while (1) {
+		tx_pkt(port);
+	}
+}
+void lcore_rxmain(struct port *port) {
+	while (1) {
+		rx_pkt(port);
+	}
+}
+
+/*static */int launch_lcore_tx(/*__attribute__ ((unused)) */void *arg) {
+	unsigned lcore_id = rte_lcore_id();
+	printf("lcore%u launched\n",lcore_id);
+
+	lcore_txmain((struct port *)arg);
+	return 0;
+}
+/*static */int launch_lcore_rx(/*__attribute__ ((unused)) */void *arg) {
+	unsigned lcore_id = rte_lcore_id();
+	printf("lcore%u launched\n",lcore_id);
+
+	lcore_rxmain((struct port *)arg);
+	return 0;
+}
+
+#if 1
+int main() {
+	dpdk_init();
+
+	struct port *port;
+	port = port_open(0);
+
+	uint16_t nb_ports;
+	uint16_t nport = port->port_num;
+	struct rte_mbuf *bufs[BURST_SIZE];
+	struct rte_mbuf *tbufs[BURST_SIZE];
+	uint16_t nb_rx;
+	uint16_t nb_tx;
+
+	printf("launch from master\n");
+	rte_eal_remote_launch(launch_lcore_rx, (void *)port, 1);
+	rte_eal_remote_launch(launch_lcore_tx, (void *)port, 2);
+
+
+	while(1) {
+		int j;
+		uint32_t pop_size;
+		int rx_pop_num = rx_queue.num;
+		if (rx_pop_num > 0) {
+			printf("rx_pop_num > 0\n");
+		}
+		for (j = 0; j < rx_pop_num; j++){
+			struct rte_mbuf *mbuf;// = (struct rte_mbuf *)malloc(sizeof(struct rte_mbuf *));
+			mbuf = rx_queue_pop(&pop_size);
+			uint8_t *p = rte_pktmbuf_mtod(mbuf, uint8_t*);
+			uint32_t size = rte_pktmbuf_pkt_len(bufs[j]);
+			rte_hexdump(stdout, "", (const void *)p, pop_size);
+	//		p = NULL;
+	
+			tx_queue_push(mbuf, pop_size);
+		}
+	}
+
+
+	rte_eal_wait_lcore(1);
+	rte_eal_wait_lcore(2);
+
+	return 0;
+}
+
+#else
 int main() {
 	dpdk_init();
 
@@ -413,7 +487,7 @@ int main() {
 		//}
 		int j;
 		uint32_t pop_size;
-		xnt rx_pop_num = rx_queue.num;
+		int rx_pop_num = rx_queue.num;
 		for (j = 0; j < rx_pop_num; j++){
 			struct rte_mbuf *mbuf;// = (struct rte_mbuf *)malloc(sizeof(struct rte_mbuf *));
 			mbuf = rx_queue_pop(&pop_size);
@@ -462,3 +536,4 @@ int main() {
 	
 	return 0;
 }
+#endif
