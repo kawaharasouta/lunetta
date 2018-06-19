@@ -413,7 +413,7 @@ int main() {
 		//}
 		int j;
 		uint32_t pop_size;
-		int rx_pop_num = rx_queue.num;
+		xnt rx_pop_num = rx_queue.num;
 		for (j = 0; j < rx_pop_num; j++){
 			struct rte_mbuf *mbuf;// = (struct rte_mbuf *)malloc(sizeof(struct rte_mbuf *));
 			mbuf = rx_queue_pop(&pop_size);
