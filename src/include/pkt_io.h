@@ -8,6 +8,8 @@
 #define MBUF_CACHE_SIZE 250
 #define BURST_SIZE 32
 
+#include<pthread.h>
+
 
 struct pkt_queue {
 	struct rte_mbuf *mbuf;
@@ -18,6 +20,7 @@ struct queue_info {
 	uint32_t num;
 	struct pkt_queue *head;
 	struct pkt_queue *tail;
+	pthread_mutex_t mutex;
 };
 struct port {
 	uint8_t port_num;

@@ -1,6 +1,7 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include<string.h>
+#include<unistd.h>
 
 #include <rte_eal.h>
 #include <inttypes.h>
@@ -10,6 +11,7 @@
 #include <rte_mbuf.h>
 #include <rte_hexdump.h>
 #include <rte_ether.h>
+#include<pthread.h>
 
 #include"include/pkt_io.h"
 
@@ -18,9 +20,10 @@ struct queue_info{
 	int num;
 	struct pkt_queue *head;
 	struct pkt_queue *tail;
+	pthread_mutex_t mutex;
 };
 struct pkt_queue {
-
+	struct rte_mbuf *mbuf;
 	uint32_t size;
 	struct pkt_queue *next;
 };
@@ -69,10 +72,13 @@ void queue_init() {
 	tx_queue.head = NULL;
 	tx_queue.tail = NULL;
 	tx_queue.num = 0;
+	pthread_mutex_init(&tx_queue.mutex, NULL);
 
 	rx_queue.head = NULL;
 	rx_queue.tail = NULL;
 	rx_queue.num = 0;
+
+	pthread_mutex_init(&rx_queue.mutex, NULL);
 
 	allocate_pool_brk();
 }
@@ -81,6 +87,7 @@ void tx_queue_push(struct rte_mbuf *mbuf, uint32_t size) {
 	if (mbuf == NULL)
 		return;
 
+	//pthread_mutex_lock(&tx_queue.mutex);
 	tx_queue.num += 1;
 	struct pkt_queue *pkt = (struct pkt_queue *)malloc(sizeof(struct pkt_queue));
 	//struct pkt_queue *pkt = allocate_pkt_queue();
@@ -105,6 +112,8 @@ void tx_queue_push(struct rte_mbuf *mbuf, uint32_t size) {
     rx_queue.head = pkt;
   }
 #endif
+
+	//pthread_mutex_unlock(&tx_queue.mutex);
 	return;
 }
 
@@ -112,6 +121,7 @@ struct rte_mbuf* tx_queue_pop() {
 	if (tx_queue.head == NULL) {
 		return NULL;
 	}
+	//pthread_mutex_lock(&tx_queue.mutex);
 
 	tx_queue.num -= 1;
 	struct rte_mbuf *ret;// = (struct rte_mbuf *)malloc(sizeof(struct rte_mbuf *));
@@ -120,6 +130,7 @@ struct rte_mbuf* tx_queue_pop() {
 	tx_queue.head = tx_queue.head->next;
 	free((struct pkt_queue *)dust);
 	//if head is NULL, tail can be anything
+	//pthread_mutex_unlock(&tx_queue.mutex);
 	return ret;
 }
 
@@ -127,6 +138,7 @@ void rx_queue_push(struct rte_mbuf *mbuf, uint32_t size) {
 	if (mbuf == NULL)
 		return;
 
+	//pthread_mutex_lock(&rx_queue.mutex);
 	rx_queue.num += 1;
 	struct pkt_queue *pkt = (struct pkt_queue *)malloc(sizeof(struct pkt_queue));
 	//struct pkt_queue *pkt = allocate_pkt_queue();
@@ -151,6 +163,7 @@ void rx_queue_push(struct rte_mbuf *mbuf, uint32_t size) {
     rx_queue.head = pkt;
   }
 #endif
+	//pthread_mutex_unlock(&rx_queue.mutex);
 	return;
 }
 
@@ -159,6 +172,7 @@ struct rte_mbuf* rx_queue_pop(uint32_t *size) {
 		return NULL;
 	}
 
+	//pthread_mutex_lock(&rx_queue.mutex);
 	rx_queue.num -= 1;
 	struct rte_mbuf *ret;// = (struct rte_mbuf *)malloc(sizeof(struct rte_mbuf *));
 	ret = rx_queue.head->mbuf;
@@ -167,6 +181,7 @@ struct rte_mbuf* rx_queue_pop(uint32_t *size) {
 	rx_queue.head = rx_queue.head->next;
 	free((struct pkt_queue *)dust);
 	//if head is NULL, tail can be anything
+	//pthread_mutex_unlock(&rx_queue.mutex);
 	return ret;
 }
 
@@ -405,6 +420,37 @@ void lcore_rxmain(struct port *port) {
 	return 0;
 }
 
+/** 1lcore per 1port **/
+void lcore_rxtxmain(struct port *port) {
+	printf("lcore_rxtxmain");
+	printf("port->port_num: %u\n", port->port_num);
+	while (1) {
+		sleep(1);
+		rx_pkt(port);
+		//sleep(1);
+		tx_pkt(port);
+	}
+}
+int launch_lcore_rxtx(void *arg) {
+	unsigned lcore_id = rte_lcore_id();
+	printf("lcore%u launched\n", lcore_id);
+
+	lcore_rxtxmain((struct port *)arg);
+	return 0;
+}
+
+
+/* test pthread */
+void *rxtx_thread(void *arg) {
+	while (1) {
+		sleep(1);
+		rx_pkt((struct port *)arg);
+		//sleep(1);
+		tx_pkt((struct port *)arg);
+	}
+}
+
+
 #if 1
 int main() {
 	dpdk_init();
@@ -420,14 +466,19 @@ int main() {
 	uint16_t nb_tx;
 
 	printf("launch from master\n");
-	rte_eal_remote_launch(launch_lcore_rx, (void *)port, 1);
-	rte_eal_remote_launch(launch_lcore_tx, (void *)port, 2);
-
+	//rte_eal_remote_launch(launch_lcore_rx, (void *)port, 1);
+	//rte_eal_remote_launch(launch_lcore_tx, (void *)port, 2);
+	rte_eal_remote_launch(launch_lcore_rxtx, (void *)port, 1);
 
 	while(1) {
+		sleep(1);
+		printf("***\n");
 		int j;
 		uint32_t pop_size;
-		int rx_pop_num = rx_queue.num;
+		int rx_pop_num;
+		//pthread_mutex_lock(&tx_queue.mutex);
+		//pthread_mutex_lock(&rx_queue.mutex);
+		rx_pop_num = rx_queue.num;
 		if (rx_pop_num > 0) {
 			printf("rx_pop_num > 0\n");
 		}
@@ -435,17 +486,23 @@ int main() {
 			struct rte_mbuf *mbuf;// = (struct rte_mbuf *)malloc(sizeof(struct rte_mbuf *));
 			mbuf = rx_queue_pop(&pop_size);
 			uint8_t *p = rte_pktmbuf_mtod(mbuf, uint8_t*);
-			uint32_t size = rte_pktmbuf_pkt_len(bufs[j]);
+			//uint32_t size = rte_pktmbuf_pkt_len(bufs[j]);
 			rte_hexdump(stdout, "", (const void *)p, pop_size);
 	//		p = NULL;
-	
+			//pthread_mutex_lock(&tx_queue.mutex);
 			tx_queue_push(mbuf, pop_size);
+			//pthread_mutex_unlock(&tx_queue.mutex);
 		}
+		//pthread_mutex_unlock(&tx_queue.mutex);
+		//pthread_mutex_unlock(&rx_queue.mutex);
 	}
 
 
 	rte_eal_wait_lcore(1);
-	rte_eal_wait_lcore(2);
+	//rte_eal_wait_lcore(2);
+
+	pthread_mutex_destroy(&tx_queue.mutex);
+	pthread_mutex_destroy(&rx_queue.mutex);
 
 	return 0;
 }
@@ -464,7 +521,34 @@ int main() {
 	uint16_t nb_rx;
 	uint16_t nb_tx;
 	//uint8_t *p;
+#if 1
+	pthread_t thread;
 
+	pthread_create(&thread, NULL, rxtx_thread, (void *)port);
+
+	while (1) {
+		printf("***\n");
+		sleep(1);
+		int j;
+		uint32_t pop_size;
+		//pthread_mutex_lock(&rx_queue.mutex);
+		int rx_pop_num = rx_queue.num;
+		for (j = 0; j < rx_pop_num; j++){
+			struct rte_mbuf *mbuf;// = (struct rte_mbuf *)malloc(sizeof(struct rte_mbuf *));
+			mbuf = rx_queue_pop(&pop_size);
+			uint8_t *p = rte_pktmbuf_mtod(mbuf, uint8_t*);
+			//uint32_t size = rte_pktmbuf_pkt_len(bufs[j]);
+			rte_hexdump(stdout, "", (const void *)p, pop_size);
+			
+			//pthread_mutex_lock(&tx_queue.mutex);
+			tx_queue_push(mbuf, pop_size);
+			//pthread_mutex_unlock(&tx_queue.mutex);
+		}
+		//pthread_mutex_unlock(&rx_queue.mutex);
+
+	}
+
+#else
 	for (;;){
 #if 1
 		rx_pkt(port);
@@ -493,7 +577,7 @@ int main() {
 			mbuf = rx_queue_pop(&pop_size);
 			uint8_t *p = rte_pktmbuf_mtod(mbuf, uint8_t*);
 			uint32_t size = rte_pktmbuf_pkt_len(bufs[j]);
-			rte_hexdump(stdout, "", (const void *)p, pop_size);
+			//rte_hexdump(stdout, "", (const void *)p, pop_size);
 	//		p = NULL;
 
 			tx_queue_push(mbuf, pop_size);
@@ -533,7 +617,8 @@ int main() {
 		//rx_pkt(port);
 		//tx_pkt(port);
 	}
-	
+#endif
+	pthread_join(thread, NULL);
 	return 0;
 }
 #endif
