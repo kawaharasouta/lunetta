@@ -371,7 +371,7 @@ tx_pkt (struct port *port) {
 			bufs[i] = tx_queue_pop();
 		}
 		nb_tx = rte_eth_tx_burst(nport, 0, bufs, 1);
-		for (j = 0; j < pop_num; j++) {
+		for (j = nb_tx; j < pop_num; j++) {
 			rte_pktmbuf_free(bufs[j]);
 		}
 	}
@@ -491,19 +491,23 @@ int main() {
 
 	while(1) {
 		sleep(1);
-		printf("***\n");
+		//printf("***\n");
 		int j;
 		uint32_t pop_size;
 		int rx_pop_num;
 		//pthread_mutex_lock(&tx_queue.mutex);
 		//pthread_mutex_lock(&rx_queue.mutex);
 		rx_pop_num = rx_queue.num;
-		if (rx_pop_num > 0) {
+		/*if (rx_pop_num > 0) {
 			printf("rx_pop_num > 0\n");
-		}
+		}*/
 		for (j = 0; j < rx_pop_num; j++){
 			struct rte_mbuf *mbuf;// = (struct rte_mbuf *)malloc(sizeof(struct rte_mbuf *));
 			mbuf = rx_queue_pop(&pop_size);
+			if (pop_size != 60) {
+				printf("pop_size: %u\n", pop_size);
+				//continue;
+			}
 			uint8_t *p = rte_pktmbuf_mtod(mbuf, uint8_t*);
 			//uint32_t size = rte_pktmbuf_pkt_len(bufs[j]);
 			rte_hexdump(stdout, "", (const void *)p, pop_size);
@@ -546,7 +550,7 @@ int main() {
 	pthread_create(&thread, NULL, rxtx_thread, (void *)port);
 
 	while (1) {
-		printf("***\n");
+		//printf("***\n");
 		sleep(1);
 		int j;
 		uint32_t pop_size;
