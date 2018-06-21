@@ -15,6 +15,8 @@
 
 #include"include/pkt_io.h"
 
+#define QUEUE_SIZE 10000
+
 #if 0
 struct queue_info{
 	int num;
@@ -36,7 +38,9 @@ struct queue_info rx_queue;
 struct allocate_pool {
 	uint16_t num;
 	//struct pkt_queue *head;
-	struct pkt_queue *head[1000];
+	struct pkt_queue *head;
+	struct pkt_queue *tail;
+	struct pkt_queue *next;
 } allocate_pool;
 void allocate_pool_brk() {
 	//allocate_pool.head = (struct pkt_queue *)malloc(sizeof(struct pkt_queue) * 2);
@@ -44,27 +48,38 @@ void allocate_pool_brk() {
 	//struct pkt_queue *pool = (struct pkt_queue *)malloc(sizeof(struct pkt_queue) * 2);
 	//*allocate_pool.head = pool;
 
-	//allocate_pool.head = (struct pkt_queue **)malloc(sizeof(struct pkt_queue *) * 1000);
-	for (int i = 0; i < 1000; i++){
+	allocate_pool.head = (struct pkt_queue *)malloc(sizeof(struct pkt_queue) * QUEUE_SIZE);
+	allocate_pool.next = allocate_pool.head;
+	allocate_pool.tail = allocate_pool.head + QUEUE_SIZE - 1;
+	
+	/*for (int i = 0; i < 1000; i++){
 		allocate_pool.head[i] = (struct pkt_queue *)malloc(sizeof(struct pkt_queue *));
-	}
-	allocate_pool.num = 1000;
+	}*/
+	allocate_pool.num = QUEUE_SIZE;
 }
 struct pkt_queue* allocate_pkt_queue() {
+#if 0
 	if (allocate_pool.num <= 0) {
 		allocate_pool_brk();
 	}
-#if 1
-	//struct pkt_queue *ret = *allocate_pool.head;
+	struct pkt_queue *ret = allocate_pool.head;
 	//allocate_pool.head += sizeof(struct allocate_pool *);
-	//allocate_pool.head++;
+	allocate_pool.head++;
 	//return ret;
 	allocate_pool.num--;
-	return allocate_pool.head[/*(500 - 1) - */allocate_pool.num];
+	//return allocate_pool.head[/*(500 - 1) - */allocate_pool.num];
+	return ret;
 #else
-	uint16_t index = allocate_pool.num;
-	allocate_pool.num -= 1;
-	return &allocate_pool.head[index];
+	struct pkt_queue *ret = allocate_pool.next;
+
+	if (allocate_pool.next == allocate_pool.tail) {
+		allocate_pool.next = allocate_pool.head;
+	}
+	else {
+		allocate_pool.next++;
+	}
+
+	return ret;
 #endif
 }
 /*************************************/
@@ -89,8 +104,8 @@ void tx_queue_push(struct rte_mbuf *mbuf, uint32_t size) {
 
 	//pthread_mutex_lock(&tx_queue.mutex);
 	tx_queue.num += 1;
-	struct pkt_queue *pkt = (struct pkt_queue *)malloc(sizeof(struct pkt_queue));
-	//struct pkt_queue *pkt = allocate_pkt_queue();
+	//struct pkt_queue *pkt = (struct pkt_queue *)malloc(sizeof(struct pkt_queue));
+	struct pkt_queue *pkt = allocate_pkt_queue();
 	pkt->mbuf = mbuf;
 	//!it is really wrong
 	pkt->size = size;
@@ -128,7 +143,7 @@ struct rte_mbuf* tx_queue_pop() {
 	ret = tx_queue.head->mbuf;
 	struct pkt_queue *dust = tx_queue.head;
 	tx_queue.head = tx_queue.head->next;
-	free((struct pkt_queue *)dust);
+	//free((struct pkt_queue *)dust);
 	//if head is NULL, tail can be anything
 	//pthread_mutex_unlock(&tx_queue.mutex);
 	return ret;
@@ -138,10 +153,14 @@ void rx_queue_push(struct rte_mbuf *mbuf, uint32_t size) {
 	if (mbuf == NULL)
 		return;
 
+	if (size > 1512) {
+		return;
+	}
+
 	//pthread_mutex_lock(&rx_queue.mutex);
 	rx_queue.num += 1;
-	struct pkt_queue *pkt = (struct pkt_queue *)malloc(sizeof(struct pkt_queue));
-	//struct pkt_queue *pkt = allocate_pkt_queue();
+	//struct pkt_queue *pkt = (struct pkt_queue *)malloc(sizeof(struct pkt_queue));
+	struct pkt_queue *pkt = allocate_pkt_queue();
 	pkt->mbuf = mbuf;
 	pkt->size = size;
 	pkt->next = NULL;
@@ -179,7 +198,7 @@ struct rte_mbuf* rx_queue_pop(uint32_t *size) {
 	*size = rx_queue.head->size;
 	struct pkt_queue *dust = rx_queue.head;
 	rx_queue.head = rx_queue.head->next;
-	free((struct pkt_queue *)dust);
+	//free((struct pkt_queue *)dust);
 	//if head is NULL, tail can be anything
 	//pthread_mutex_unlock(&rx_queue.mutex);
 	return ret;
@@ -576,7 +595,10 @@ int main() {
 			struct rte_mbuf *mbuf;// = (struct rte_mbuf *)malloc(sizeof(struct rte_mbuf *));
 			mbuf = rx_queue_pop(&pop_size);
 			uint8_t *p = rte_pktmbuf_mtod(mbuf, uint8_t*);
-			uint32_t size = rte_pktmbuf_pkt_len(bufs[j]);
+			if (pop_size != 60){
+				printf("size: %u\n", pop_size);
+			}
+			//uint32_t size = rte_pktmbuf_pkt_len(bufs[j]);
 			//rte_hexdump(stdout, "", (const void *)p, pop_size);
 	//		p = NULL;
 
