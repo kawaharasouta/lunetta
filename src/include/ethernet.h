@@ -5,7 +5,7 @@
 
 
 typedef struct {
-	uint8_t addr[ETHER_ADDR_LEN]
+	uint8_t addr[ETHER_ADDR_LEN];
 } __attribute__ ((packed)) ethernet_addr;
 
 struct ethernet_hdr {
@@ -13,5 +13,8 @@ struct ethernet_hdr {
 	ethernet_addr src;
 	uint16_t type;
 } __attribute__ ((packed));
+
+
+void print_mac_addr(ethernet_addr *addr);
 
 #endif

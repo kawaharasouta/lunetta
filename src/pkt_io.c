@@ -224,7 +224,7 @@ static const struct rte_eth_conf port_conf_default = {
  * coming from the mbuf_pool passed as a parameter.
  */
 /*static */int
-port_init(uint16_t port)
+port_init(/*uint16_t port*/struct port_config *port)
 { 
 	struct rte_eth_conf port_conf = port_conf_default;
 	const uint16_t rx_rings = 1, tx_rings = 1;
@@ -233,25 +233,26 @@ port_init(uint16_t port)
 	int retval;
 	uint16_t q;
 	struct ether_addr addr;
+	uint16_t nport = port->port_num;
 	
-	if (port >= rte_eth_dev_count()) {
+	if (nport >= rte_eth_dev_count()) {
 		return -1;
 	}
 	
 	/* Configure the Ethernet port. */ 
-	retval = rte_eth_dev_configure(port, rx_rings, tx_rings, &port_conf);
+	retval = rte_eth_dev_configure(nport, rx_rings, tx_rings, &port_conf);
 	if (retval != 0) {
 		return retval;
 	}
 	
-	retval = rte_eth_dev_adjust_nb_rx_tx_desc(port, &nb_rxd, &nb_txd);
+	retval = rte_eth_dev_adjust_nb_rx_tx_desc(nport, &nb_rxd, &nb_txd);
 	if (retval != 0) {
 		return retval;
 	}
 	
 	/* Allocate and set up 1 RX queue per Ethernet port. */
 	for (q = 0; q < rx_rings; q++) {
-		retval = rte_eth_rx_queue_setup(port, q, nb_rxd, rte_eth_dev_socket_id(port), NULL, mbuf_pool);
+		retval = rte_eth_rx_queue_setup(nport, q, nb_rxd, rte_eth_dev_socket_id(nport), NULL, mbuf_pool);
 		if (retval < 0) {
 			return retval;
 		}
@@ -259,28 +260,32 @@ port_init(uint16_t port)
 	
 	/* Allocate and set up 1 TX queue per Ethernet port. */
 	for (q = 0; q < tx_rings; q++) {
-		retval = rte_eth_tx_queue_setup(port, q, nb_txd, rte_eth_dev_socket_id(port), NULL);
+		retval = rte_eth_tx_queue_setup(nport, q, nb_txd, rte_eth_dev_socket_id(nport), NULL);
 		if (retval < 0) {
 			return retval;
 		}
 	}
 	
 	/* Start the Ethernet port. */
-	retval = rte_eth_dev_start(port);
+	retval = rte_eth_dev_start(nport);
 	if (retval < 0) {
 		return retval;
 	}
   
 	/* Display the port MAC address. */
-	rte_eth_macaddr_get(port, &addr);
+	rte_eth_macaddr_get(nport, &addr);
 	printf("Port %u MAC: %02" PRIx8 " %02" PRIx8 " %02" PRIx8 " %02" PRIx8 " %02" PRIx8 " %02" PRIx8 "\n",
-		port,
+		nport,
 		addr.addr_bytes[0], addr.addr_bytes[1],
 		addr.addr_bytes[2], addr.addr_bytes[3],
 		addr.addr_bytes[4], addr.addr_bytes[5]);
 	
+	for (int i = 0; i < ETHER_ADDR_LEN; i++) {
+		port->mac_addr.addr[i] = addr.addr_bytes[i];
+	}
+	
 	/* Enable RX in promiscuous mode for the Ethernet port. */
-	rte_eth_promiscuous_enable(port);
+	rte_eth_promiscuous_enable(nport);
   
 	return 0;
 }
@@ -315,30 +320,30 @@ dpdk_init(void){
 
 
 /* Wrapped a function to control port but not practically meaningful. It is expected that name will be assigned port number. */
-struct port 
-*port_open (const uint8_t num) {
-	struct port *port;
-	if ((port = malloc(sizeof(struct port))) == NULL) {
-		perror("malloc");
-		return NULL;
-	}
-	port->port_num = num;
-	
-	if (port_init(port->port_num) < 0){
-		free(port);
-		return NULL;
-	}
-  
-	return port;
-}
-
-void 
-port_close (struct port *port) {
-	printf("close port %u\n", port->port_num);
-	rte_eth_dev_stop(port->port_num);
-	rte_eth_dev_close(port->port_num);
-	free(port);
-}
+//struct port 
+//*port_open (const uint8_t num) {
+//	struct port *port;
+//	if ((port = malloc(sizeof(struct port))) == NULL) {
+//		perror("malloc");
+//		return NULL;
+//	}
+//	port->port_num = num;
+//	
+//	if (port_init(port->port_num) < 0){
+//		free(port);
+//		return NULL;
+//	}
+//  
+//	return port;
+//}
+//
+//void 
+//port_close (struct port *port) {
+//	printf("close port %u\n", port->port_num);
+//	rte_eth_dev_stop(port->port_num);
+//	rte_eth_dev_close(port->port_num);
+//	free(port);
+//}
 
 void
 rx_pkt (struct port_config *port) {

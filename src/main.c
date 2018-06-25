@@ -26,7 +26,9 @@ int main(int argc, char **argv){
 
 	struct port_config port;
 	port.port_num = 0;
-	port_init(0);
+	port_init(&port);
+
+	print_mac_addr(&port.mac_addr);
 	
 
 
