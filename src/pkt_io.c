@@ -470,6 +470,12 @@ void *rxtx_thread(void *arg) {
 }
 
 
+
+
+#if 0
+//!!!!!!!!!!!!!!comment out main
+
+
 #if 1
 int main() {
 	dpdk_init();
@@ -647,4 +653,8 @@ int main() {
 	pthread_join(thread, NULL);
 	return 0;
 }
+#endif
+
+
+//!!!!!!!!!!!!!!!! comment out main
 #endif
