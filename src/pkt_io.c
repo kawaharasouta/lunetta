@@ -472,7 +472,7 @@ void *rxtx_thread(void *arg) {
 
 
 
-#if 0
+//#if 0
 //!!!!!!!!!!!!!!comment out main
 
 
@@ -657,4 +657,4 @@ int main() {
 
 
 //!!!!!!!!!!!!!!!! comment out main
-#endif
+//#endif
