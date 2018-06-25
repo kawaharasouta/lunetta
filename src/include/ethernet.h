@@ -1,6 +1,11 @@
 #ifndef __ETHERNET_H_
 #define __ETHERNET_H_
 
+
+#define ETHERTYPE_IP 0x0800
+#define ETHERTYPE_ARP 0x0806
+#define ETHERTYPE_RARP 0x8035
+
 #define ETHER_ADDR_LEN 6
 
 
@@ -16,5 +21,6 @@ struct ethernet_hdr {
 
 
 void print_mac_addr(ethernet_addr *addr);
+void rx_ether();
 
 #endif

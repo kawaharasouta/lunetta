@@ -51,6 +51,8 @@ int main(int argc, char **argv){
 
 	while(1) {
 		sleep(1);
+
+#if 0
 		//printf("***\n");
 		int j;
 		uint32_t pop_size;
@@ -78,6 +80,10 @@ int main(int argc, char **argv){
 		}
 		//pthread_mutex_unlock(&tx_queue.mutex);
 		//pthread_mutex_unlock(&rx_queue.mutex);
+#else
+		if (rx_queue.num > 0)
+			rx_ether();
+#endif
 	}
 
 
