@@ -42,7 +42,7 @@ include $(RTE_SDK)/mk/rte.vars.mk
 APP = main
 
 # all source are stored in SRCS-y
-SRCS-y := pkt_io.c main.c
+SRCS-y := pkt_io.c main.c lunetta.c
 
 CFLAGS += -g -O3 -lpthread -pthread 
 #CFLAGS += $(WERROR_FLAGS)

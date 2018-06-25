@@ -13,7 +13,9 @@
 #include <rte_ether.h>
 #include<pthread.h>
 
+#include"include/lunetta.h"
 #include"include/pkt_io.h"
+#include"include/ethernet.h"
 
 #define QUEUE_SIZE 10000
 
@@ -221,7 +223,7 @@ static const struct rte_eth_conf port_conf_default = {
  * Initializes a given port using global settings and with the RX buffers
  * coming from the mbuf_pool passed as a parameter.
  */
-static int
+/*static */int
 port_init(uint16_t port)
 { 
 	struct rte_eth_conf port_conf = port_conf_default;
@@ -339,7 +341,7 @@ port_close (struct port *port) {
 }
 
 void
-rx_pkt (struct port *port) {
+rx_pkt (struct port_config *port) {
 	//uint16_t nb_ports;
 	uint16_t nport = port->port_num;
 	struct rte_mbuf *bufs[BURST_SIZE];
@@ -358,7 +360,7 @@ rx_pkt (struct port *port) {
 }
 
 size_t
-tx_pkt (struct port *port) {
+tx_pkt (struct port_config *port) {
 	struct rte_mbuf *bufs[BURST_SIZE];
 	uint16_t nport = port->port_num;
 	int i, j, k;
@@ -413,34 +415,34 @@ tx_pkt (struct port *port) {
 
 
 //static/* __attribute__((noreturn))*/ void
-void lcore_txmain(struct port *port) {
-	while (1) {
-		tx_pkt(port);
-	}
-}
-void lcore_rxmain(struct port *port) {
-	while (1) {
-		rx_pkt(port);
-	}
-}
+//void lcore_txmain(struct port *port) {
+//	while (1) {
+//		tx_pkt(port);
+//	}
+//}
+//void lcore_rxmain(struct port *port) {
+//	while (1) {
+//		rx_pkt(port);
+//	}
+//}
 
-/*static */int launch_lcore_tx(/*__attribute__ ((unused)) */void *arg) {
-	unsigned lcore_id = rte_lcore_id();
-	printf("lcore%u launched\n",lcore_id);
-
-	lcore_txmain((struct port *)arg);
-	return 0;
-}
-/*static */int launch_lcore_rx(/*__attribute__ ((unused)) */void *arg) {
-	unsigned lcore_id = rte_lcore_id();
-	printf("lcore%u launched\n",lcore_id);
-
-	lcore_rxmain((struct port *)arg);
-	return 0;
-}
+///*static */int launch_lcore_tx(/*__attribute__ ((unused)) */void *arg) {
+//	unsigned lcore_id = rte_lcore_id();
+//	printf("lcore%u launched\n",lcore_id);
+//
+//	lcore_txmain((struct port *)arg);
+//	return 0;
+//}
+///*static */int launch_lcore_rx(/*__attribute__ ((unused)) */void *arg) {
+//	unsigned lcore_id = rte_lcore_id();
+//	printf("lcore%u launched\n",lcore_id);
+//
+//	lcore_rxmain((struct port *)arg);
+//	return 0;
+//}
 
 /** 1lcore per 1port **/
-void lcore_rxtxmain(struct port *port) {
+void lcore_rxtxmain(struct port_config *port) {
 	printf("lcore_rxtxmain");
 	printf("port->port_num: %u\n", port->port_num);
 	while (1) {
@@ -454,7 +456,7 @@ int launch_lcore_rxtx(void *arg) {
 	unsigned lcore_id = rte_lcore_id();
 	printf("lcore%u launched\n", lcore_id);
 
-	lcore_rxtxmain((struct port *)arg);
+	lcore_rxtxmain((struct port_config *)arg);
 	return 0;
 }
 
@@ -463,9 +465,9 @@ int launch_lcore_rxtx(void *arg) {
 void *rxtx_thread(void *arg) {
 	while (1) {
 		sleep(1);
-		rx_pkt((struct port *)arg);
+		rx_pkt((struct port_config *)arg);
 		//sleep(1);
-		tx_pkt((struct port *)arg);
+		tx_pkt((struct port_config *)arg);
 	}
 }
 

@@ -12,19 +12,31 @@
 #include <rte_hexdump.h>
 #include <rte_ether.h>
 
+#include"include/lunetta.h"
 #include"include/pkt_io.h"
+#include"include/ethernet.h"
 
 
 
 int main(int argc, char **argv){
-	dpdk_init();
-	struct port *port;
+	if (lunetta_init() == -1) {
+		exit(1);
+	}
 
-	port = port_open(0);
+
+	struct port_config port;
+	port.port_num = 0;
+	port_init(0);
+	
+
+
+	//struct port *port;
+
+	//port = port_open(0);
 
 
 	uint16_t nb_ports;
-	uint16_t nport = port->port_num;
+	uint16_t nport = /*port->port_num*/port.port_num;
 	struct rte_mbuf *bufs[BURST_SIZE];
 	struct rte_mbuf *tbufs[BURST_SIZE];
 	uint16_t nb_rx;
@@ -33,7 +45,7 @@ int main(int argc, char **argv){
 	printf("launch from master\n");
 	//rte_eal_remote_launch(launch_lcore_rx, (void *)port, 1);
 	//rte_eal_remote_launch(launch_lcore_tx, (void *)port, 2);
-	rte_eal_remote_launch(launch_lcore_rxtx, (void *)port, 1);
+	rte_eal_remote_launch(launch_lcore_rxtx, (void *)&port, 1);
 
 	while(1) {
 		sleep(1);

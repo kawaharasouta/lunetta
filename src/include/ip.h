@@ -1,6 +1,8 @@
 #ifndef __IP_H_
 #define __IP_H_
 
+#include<stdint.h>
+
 struct ip_hdr{
 #if __BYTE_ORDER == __LITTLE_ENDIAN
 	unsigned int hdr_len:4;
@@ -11,15 +13,15 @@ struct ip_hdr{
 #else
 # error "Please fix <bits/endian.h>"
 #endif
-	u_int8_t type_of_service;
-	u_int16_t total_len;
-	u_int16_t id;
-	u_int16_t frag;
-	u_int8_t ttl;
-	u_int8_t proto;
-	u_int16_t check;
-	u_int32_t src_addr;
-	u_int32_t dest_addr;
+	uint8_t type_of_service;
+	uint16_t total_len;
+	uint16_t id;
+	uint16_t frag;
+	uint8_t ttl;
+	uint8_t proto;
+	uint16_t check;
+	uint32_t src_addr;
+	uint32_t dest_addr;
 }
 
 #endif
