@@ -22,6 +22,10 @@ struct ip_hdr{
 	uint16_t check;
 	uint32_t src_addr;
 	uint32_t dest_addr;
-}
+};
+
+
+void print_ip_hdr(struct ip_hdr *ip_hdr);
+void rx_ip(uint8_t *packet, uint32_t size, struct port_config *port);
 
 #endif

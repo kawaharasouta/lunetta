@@ -82,7 +82,7 @@ int main(int argc, char **argv){
 		//pthread_mutex_unlock(&rx_queue.mutex);
 #else
 		if (rx_queue.num > 0)
-			rx_ether();
+			rx_ether(&port);
 #endif
 	}
 

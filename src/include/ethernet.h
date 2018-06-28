@@ -21,6 +21,8 @@ struct ethernet_hdr {
 
 
 void print_mac_addr(ethernet_addr *addr);
-void rx_ether();
+int equal_mac_addr(ethernet_addr *addr1, ethernet_addr *addr2);
+int is_ether_broadcast(ethernet_addr *addr);
+void rx_ether(struct_port_config);
 
 #endif
