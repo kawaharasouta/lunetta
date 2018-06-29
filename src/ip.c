@@ -10,9 +10,13 @@
 #include"include/ip.h"
 
 
-//void print_ip_addr(uint32_t addr) {
-//
-//}
+void print_ip_addr(uint32_t addr) {
+	uint8_t *ad = (uint8_t *)&addr;
+
+	printf("%u.%u.%u.%u\n", ad[0], ad[1], ad[2], ad[3]);
+
+	return;
+}
 
 void print_ip_hdr(struct ip_hdr *ip_hdr) {
 	printf("version: %u\n", ip_hdr->version);
@@ -25,6 +29,8 @@ void print_ip_hdr(struct ip_hdr *ip_hdr) {
 
 	//printf("Source IP Address: %s\n", inet_ntoa(ip_hdr->src_addr));
 	//printf("Destination IP Address: %s\n", inet_ntoa(ip_hdr->dest_addr));
+	print_ip_addr(ip_hdr->src_addr);
+	print_ip_addr(ip_hdr->dest_addr);
 
 	return;
 }
@@ -35,7 +41,7 @@ void print_ip_hdr(struct ip_hdr *ip_hdr) {
 void rx_ip(uint8_t *packet, uint32_t size, struct port_config *port) {
 	struct ip_hdr *p = (struct ip_hdr *)packet;
 
-	print_ip_hdr(packet);
+	print_ip_hdr(p);
 
 
 
