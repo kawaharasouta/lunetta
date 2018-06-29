@@ -63,8 +63,10 @@ void rx_ether(/*struct rte_mbuf *mbuf, uint32_t size*/struct port_config *port) 
 
 
 	struct ethernet_hdr *packet = (struct ethernet_hdr *)p;
+	uint8_t *pp = (uint8_t *)p;
 
-	//!!!!!!!!!!!!!!p += sizeof(struct ethernet_hdr);
+	printf("sizeof %u\n", sizeof(struct ethernet_hdr));
+	pp += sizeof(struct ethernet_hdr);
 	pop_size -= sizeof(struct ethernet_hdr);
 
 	print_ethernet_hdr(packet);
@@ -78,8 +80,9 @@ void rx_ether(/*struct rte_mbuf *mbuf, uint32_t size*/struct port_config *port) 
 			case ETHERTYPE_IP:
 			{
 				printf("ip\n");
-				packet += sizeof(struct ethernet_hdr);
-				rx_ip(p, pop_size, port);
+				rx_ip((uint8_t *)pp, pop_size, port);
+				//struct ip_hdr *ip = (struct ip_hdr *)p;
+				//printf("version: %u\n", ip->version);
 				break;
 			}
 			case ETHERTYPE_ARP:
