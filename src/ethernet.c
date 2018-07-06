@@ -59,7 +59,7 @@ void rx_ether(/*struct rte_mbuf *mbuf, uint32_t size*/struct port_config *port) 
 		return;
 
 	uint32_t *p = rte_pktmbuf_mtod(mbuf, uint8_t*);
-	rte_hexdump(stdout, "", (const void *)p, pop_size);
+	//rte_hexdump(stdout, "", (const void *)p, pop_size);
 
 
 	struct ethernet_hdr *packet = (struct ethernet_hdr *)p;
