@@ -6,11 +6,12 @@
 struct mbuf {
 	uint16_t pkt_len;
 	uint16_t front_len;
-	uint16_t tail_len;
+	uint16_t back_len;
 	uint8_t front[64];
 	uint8_t packet[64];
-	uint8_t tail[64];
+	uint8_t back[64];
 	uint8_t *head;
+	uint8_t *tail;
 };
 
 void init_mbuf(struct mbuf *mbuf);

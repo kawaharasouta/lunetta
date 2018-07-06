@@ -8,10 +8,10 @@
 //struct mbuf {
 //	uint16_t pkt_len;
 //	uint16_t front_len;
-//	uint16_t tail_len;
+//	uint16_t back_len;
 //	uint8_t front[64];
 //	uint8_t packet[64];
-//	uint8_t tail[64];
+//	uint8_t back[64];
 //	uint8_t *head;
 //};
 
@@ -19,13 +19,14 @@
 void init_mbuf(struct mbuf *mbuf) {
 	mbuf->pkt_len = 0;//?
 	mbuf->front_len = 64;
-	mbuf->tail_len = 64;
+	mbuf->back_len = 64;
 
 	//mbuf->front = (uint8_t *)malloc(sizeof(uint8_t) * ROOM_SIZE);
 	//mbuf->packet = mbuf->front + (ROOM_SIZE/3);
-	//mbuf->tail = mbuf->packet + (ROOM_SIZE/3);
+	//mbuf->back = mbuf->packet + (ROOM_SIZE/3);
 
 	mbuf->head = mbuf->packet;
+	mbuf->tail = mbuf->packet;
 
 	return;
 }
@@ -46,23 +47,14 @@ void mbuf_extend_forwards(struct mbuf *mbuf, uint16_t size) {
 }
 
 void mbuf_extend_backwards(struct mbuf *mbuf, uint16_t size) {
-	if (mbuf->tail_len < size) {
+	if (mbuf->back_len < size) {
 		fprintf(stderr, "mbuf_extend_forward error\n");
 		exit(1);
 	}
-	mbuf->tail_len -= size;
-	//head += size;
+	mbuf->back_len -= size;
+	tail += size;
 
 	return;
 }
 
 
-
-//int main() {
-//	struct mbuf mbuf;
-//	init_mbuf(&mbuf);
-//	printf("%p\n", get_packet(&mbuf));
-//
-//
-//	return 0;
-//}
