@@ -369,9 +369,11 @@ tx_pkt (struct port *port) {
 			bufs[i] = tx_queue_pop();
 		}
 		nb_tx = rte_eth_tx_burst(nport, 0, bufs, 1);
-//		for (j = nb_tx; j < pop_num; j++) {
-//			rte_pktmbuf_free(bufs[j]);
-//		}
+		if (nb_tx < pop_num) {
+			for (j = nb_tx; j < pop_num; j++) {
+				rte_pktmbuf_free(bufs[j]);
+			}
+		}
 	}
  
 //	for (i = 0; i < BURST_SIZE; i++){
