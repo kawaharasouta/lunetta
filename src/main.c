@@ -83,6 +83,9 @@ int main(int argc, char **argv){
 #else
 		if (rx_queue.num > 0)
 			rx_ether(&port);
+
+		struct rte_mbuf *mbuf;
+		tx_ether(mbuf, 0, &port, 0x0800, NULL, NULL);
 #endif
 	}
 

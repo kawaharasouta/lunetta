@@ -19,4 +19,8 @@ struct arp_ether {
 	uint32_t d_ip_addr;
 } __attribute__ ((packed));
 
+
+
+int arp_resolve(const uint32_t *ip_addr, ethernet_addr *ether_addr, const void *data, uint32_t size);
+
 #endif

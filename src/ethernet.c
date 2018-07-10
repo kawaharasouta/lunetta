@@ -11,6 +11,7 @@
 #include"include/pkt_io.h"
 #include"include/ethernet.h"
 #include"include/ip.h"
+#include"include/arp.h"
 
 
 
@@ -51,14 +52,37 @@ void tx_ether(struct rte_mbuf *mbuf, uint32_t size, struct port_config *port, ui
 	uint8_t *p = rte_pktmbuf_mtod(mbuf, uint8_t*);
 
 
-	//ret = arp_resolve(paddr, &haddr, p, size);
+	ret = arp_resolve(paddr, &haddr, p, size);
 	if (ret != 1) {
 		return ret;
 	}
 	dest = &haddr;
 	//make header!!!!!!!!!
+	p = (uint8_t *)rte_pktmbuf_prepend(mbuf, sizeof(struct ethernet_hdr));
+	if (!p) {
+		fprintf(stderr, "mbuf prepend err\n");
+		exit(1);
+	}
+	struct ethernet_hdr *eth = p;
+	memcpy(eth->dest.addr, dest->addr, ETHER_ADDR_LEN);
+	memcpy(eth->src.addr, port->mac_addr.addr, ETHER_ADDR_LEN);
+	eth->type = htons(type);
+	//!!!!!!!!!!
 	len = sizeof(struct ethernet_hdr) + size;
+	if (len < 64) {
+		p += len;
+		memset(p, 0, 64 - len);
+		len = 64;
+	}
+	else if (size > 1512) {
+		return;
+	}
+	mbuf->pkt_len = len;
+	mbuf->data_len = len;
+	mbuf->port = port->port_num;
+	mbuf->packet_type = 1;
 	tx_queue_push(mbuf, len);
+	return;
 }
 
 void rx_ether(/*struct rte_mbuf *mbuf, uint32_t size*/struct port_config *port) {
