@@ -8,6 +8,7 @@
 
 #define ETHER_ADDR_LEN 6
 
+extern struct port_config;
 
 typedef struct {
 	uint8_t addr[ETHER_ADDR_LEN];
@@ -24,5 +25,5 @@ void print_mac_addr(ethernet_addr *addr);
 int equal_mac_addr(ethernet_addr *addr1, ethernet_addr *addr2);
 int is_ether_broadcast(ethernet_addr *addr);
 void rx_ether(struct_port_config);
-
+void tx_ether(struct rte_mbuf *mbuf, uint32_t size, struct port_config *port, uint16_t type, const void *paddr, ethernet_addr *dest);
 #endif

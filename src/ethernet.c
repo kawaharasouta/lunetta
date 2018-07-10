@@ -44,9 +44,21 @@ void print_ethernet_hdr(struct ethernet_hdr *ether_hdr) {
 	return;
 }
 
-void tx_ether(/*struct rte_mbuf *mbuf, uint32_t size*/void) {
-	//struct queue_pkt queue_pkt = rx_queue_pop()
-	//uint8_t *p = rte_pktmbuf_mtod(mbuf, uint8_t*);
+void tx_ether(struct rte_mbuf *mbuf, uint32_t size, struct port_config *port, uint16_t type, const void *paddr, ethernet_addr *dest) {
+	int ret;
+	uint32_t len;
+	ethernet_addr haddr;
+	uint8_t *p = rte_pktmbuf_mtod(mbuf, uint8_t*);
+
+
+	ret = arp_resolve(paddr, &haddr, p, size);
+	if (ret != 1) {
+		return ret;
+	}
+	dest = &haddr;
+	//make header!!!!!!!!!
+	len = sizeof(struct ethernet_hdr) + size;
+	tx_queue_push(mbuf, len);
 }
 
 void rx_ether(/*struct rte_mbuf *mbuf, uint32_t size*/struct port_config *port) {
