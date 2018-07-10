@@ -10,6 +10,7 @@
 
 #include<pthread.h>
 
+extern struct rte_mempool *mbuf_pool;
 
 struct pkt_queue {
 	struct rte_mbuf *mbuf;
