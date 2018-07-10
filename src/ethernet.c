@@ -51,7 +51,7 @@ void tx_ether(struct rte_mbuf *mbuf, uint32_t size, struct port_config *port, ui
 	uint8_t *p = rte_pktmbuf_mtod(mbuf, uint8_t*);
 
 
-	ret = arp_resolve(paddr, &haddr, p, size);
+	//ret = arp_resolve(paddr, &haddr, p, size);
 	if (ret != 1) {
 		return ret;
 	}
