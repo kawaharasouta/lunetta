@@ -47,49 +47,65 @@ void print_ethernet_hdr(struct ethernet_hdr *ether_hdr) {
 
 void tx_ether(/*struct rte_mbuf *mbuf, */uint32_t size, struct port_config *port, uint16_t type, const void *paddr, ethernet_addr *dest) {
 	int ret;
-	uint32_t len;
+	uint32_t len = 64;
 	ethernet_addr haddr;
 
 	struct rte_mbuf *mbuf;
 	mbuf = rte_pktmbuf_alloc(mbuf_pool);
-	uint8_t *p = rte_pktmbuf_mtod(mbuf, uint8_t*);
+	//uint8_t *p = rte_pktmbuf_mtod(mbuf, uint8_t*);
+	mbuf = rte_pktmbuf_alloc(mbuf_pool);
+  mbuf->pkt_len = len;
+	mbuf->data_len = len;
+	mbuf->port = port->port_num;
+	mbuf->packet_type = 1;
 
-
-	//ret = arp_resolve(paddr, &haddr, p, size);
 	haddr.addr[0] = 0xff;
   haddr.addr[1] = 0xff;
   haddr.addr[2] = 0xff;
   haddr.addr[3] = 0xff;
   haddr.addr[4] = 0xff;
   haddr.addr[5] = 0xff;
-	if (ret != 1) {
-		return ret;
-	}
-	dest = &haddr;
-	//make header!!!!!!!!!
-	uint8_t *pp = (uint8_t *)rte_pktmbuf_prepend(mbuf, sizeof(struct ethernet_hdr));
-	if (!p) {
-		fprintf(stderr, "mbuf prepend err\n");
-		exit(1);
-	}
-	struct ethernet_hdr *eth = pp;
-	memcpy(eth->dest.addr, dest->addr, ETHER_ADDR_LEN);
+
+	uint8_t *p = rte_pktmbuf_mtod(mbuf, uint8_t*);
+	struct ethernet_hdr *eth = p;
+
+	memcpy(eth->dest.addr, haddr.addr, ETHER_ADDR_LEN);
 	memcpy(eth->src.addr, port->mac_addr.addr, ETHER_ADDR_LEN);
-	eth->type = htons(type);
+	uint16_t _type = 0x0800;
+	eth->type = htons(_type);
+	p += sizeof(struct ethernet_hdr);
+	memset(p, 0, 40);
+
+
+	//ret = arp_resolve(paddr, &haddr, p, size);
+	//if (ret != 1) {
+	//	return ret;
+	//}
+	//dest = &haddr;
+	//make header!!!!!!!!!
+	//uint8_t *pp = (uint8_t *)rte_pktmbuf_prepend(mbuf, sizeof(struct ethernet_hdr));
+	//if (!p) {
+	//	fprintf(stderr, "mbuf prepend err\n");
+	//	exit(1);
+	//}
+	//struct ethernet_hdr *eth = pp;
+	//memcpy(eth->dest.addr, dest->addr, ETHER_ADDR_LEN);
+	//memcpy(eth->src.addr, port->mac_addr.addr, ETHER_ADDR_LEN);
+	//eth->type = htons(type);
 	//!!!!!!!!!!
-	len = sizeof(struct ethernet_hdr) + size;
-	if (len < 64) {
-		pp += len;
-		memset(pp, 0, 64 - len);
-		len = 64;
-	}
-	else if (size > 1512) {
-		return;
-	}
-	mbuf->pkt_len = len;
-	mbuf->data_len = len;
-	mbuf->port = port->port_num;
-	mbuf->packet_type = 1;
+	//len = sizeof(struct ethernet_hdr) + size;
+	//if (len < 64) {
+	//	pp += len;
+	//	memset(pp, 0, 64 - len);
+	//	len = 64;
+	//}
+	//else if (size > 1512) {
+	//	return;
+	//}
+	//mbuf->pkt_len = len;
+	//mbuf->data_len = len;
+	//mbuf->port = port->port_num;
+	//mbuf->packet_type = 1;
 	tx_queue_push(mbuf, len);
 	return;
 }

@@ -33,7 +33,7 @@ int main(int argc, char **argv){
 	//port = port_open(0);
 
 	uint16_t nb_ports;
-	uint16_t nport = /*port->port_num*/port.port_num;
+	uint16_t nport = /*port.port_num*/port.port_num;
 	struct rte_mbuf *bufs[BURST_SIZE];
 	struct rte_mbuf *tbufs[BURST_SIZE];
 	uint16_t nb_rx;
@@ -81,7 +81,47 @@ int main(int argc, char **argv){
 
 		//struct rte_mbuf *mbuf;
 		//mbuf = rte_pktmbuf_alloc(mbuf_pool);
+
+#if 1//!!!!!!!! tx_ether
+
 		tx_ether(/*mbuf, */0, &port, 0x0800, NULL, NULL);
+#else
+		struct rte_mbuf *mbuf;
+		ethernet_addr haddr;
+		uint8_t *p;
+		uint32_t len = 64;
+
+		mbuf = rte_pktmbuf_alloc(mbuf_pool);
+    mbuf->pkt_len = len;
+    mbuf->data_len = len;
+    mbuf->port = port.port_num;
+    mbuf->packet_type = 1;
+
+		haddr.addr[0] = 0xff;
+	  haddr.addr[1] = 0xff;
+	  haddr.addr[2] = 0xff;
+	  haddr.addr[3] = 0xff;
+	  haddr.addr[4] = 0xff;
+		haddr.addr[5] = 0xff;
+
+		p = rte_pktmbuf_mtod(mbuf, uint8_t*);
+		struct ethernet_hdr *eth = p;
+
+		memcpy(eth->dest.addr, haddr.addr, ETHER_ADDR_LEN);
+		memcpy(eth->src.addr, port.mac_addr.addr, ETHER_ADDR_LEN);
+		uint16_t type = 0x0800;
+		eth->type = htons(type);
+		p += sizeof(struct ethernet_hdr);
+		memset(p, 0, 40);
+		mbuf->pkt_len = len;
+	  mbuf->data_len = len;
+	  mbuf->port = port.port_num;
+	  mbuf->packet_type = 1;
+		tx_ether(mbuf, len, &port, 0x0800, NULL, NULL);
+	  //tx_queue_push(mbuf, len);		
+
+#endif// tx_ether
+
 #endif
 	}
 
