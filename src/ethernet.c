@@ -6,6 +6,7 @@
 
 #include <rte_mbuf.h>
 #include <rte_ether.h>
+#include<rte_memcpy.h>
 
 #include"include/lunetta.h"
 #include"include/pkt_io.h"
@@ -67,15 +68,36 @@ void tx_ether(/*struct rte_mbuf *mbuf, */uint32_t size, struct port_config *port
   haddr.addr[5] = 0xff;
 
 	uint8_t *p = rte_pktmbuf_mtod(mbuf, uint8_t*);
+	uint8_t *q = p;
 	struct ethernet_hdr *eth = p;
 
-	memcpy(eth->dest.addr, haddr.addr, ETHER_ADDR_LEN);
-	memcpy(eth->src.addr, port->mac_addr.addr, ETHER_ADDR_LEN);
-	uint16_t _type = 0x0800;
-	eth->type = htons(_type);
+	//memcpy(eth->dest.addr, haddr.addr, ETHER_ADDR_LEN);
+	//memcpy(eth->src.addr, port->mac_addr.addr, ETHER_ADDR_LEN);
+	uint16_t _type = 0x01111;
+	//eth->type = htons(_type);
+	memcpy(&eth->type, &_type, 2);
 	p += sizeof(struct ethernet_hdr);
-	memset(p, 0, 40);
+	//memset(p, 0, 40);
+	printf("headroom %u\n", rte_pktmbuf_headroom(mbuf));
+	//uint8_t *pp = (uint8_t *)rte_pktmbuf_prepend(mbuf, sizeof(uint8_t) * 20);
+	//eth = (struct ethernet_hdr *)rte_pktmbuf_prepend(mbuf, sizeof(uint8_t) * 20);
+	printf("headroom %u\n", rte_pktmbuf_headroom(mbuf));
+	/*if (p == pp) {
+		printf("p == pp\n");
+	}
+	if (q == pp) {
+		printf("q == pp\n");
+	}
+	q -= 20;
+	if (q == pp) {
+		printf("q-20 == pp\n");
+	}*/
+	//memset(pp, (uint8_t)0x01, sizeof(uint8_t) * 20);
+	//eth = pp;
 
+	//rte_memcpy(eth->dest.addr, haddr.addr, ETHER_ADDR_LEN);
+	//rte_memcpy(eth->src.addr, port->mac_addr.addr, ETHER_ADDR_LEN);
+	//eth->type = htons(_type);
 
 	//ret = arp_resolve(paddr, &haddr, p, size);
 	//if (ret != 1) {
