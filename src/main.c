@@ -79,12 +79,12 @@ int main(int argc, char **argv){
 		if (rx_queue.num > 0)
 			rx_ether(&port);
 
-		//struct rte_mbuf *mbuf;
-		//mbuf = rte_pktmbuf_alloc(mbuf_pool);
+		struct rte_mbuf *mbuf;
+		mbuf = rte_pktmbuf_alloc(mbuf_pool);
 
 #if 1//!!!!!!!! tx_ether
 
-		tx_ether(/*mbuf, */0, &port, 0x0800, NULL, NULL);
+		tx_ether(mbuf, 0, &port, 0x0800, NULL, NULL);
 #else
 		struct rte_mbuf *mbuf;
 		ethernet_addr haddr;
