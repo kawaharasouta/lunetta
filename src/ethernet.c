@@ -73,15 +73,14 @@ void tx_ether(/*struct rte_mbuf *mbuf, */uint32_t size, struct port_config *port
 
 	//memcpy(eth->dest.addr, haddr.addr, ETHER_ADDR_LEN);
 	//memcpy(eth->src.addr, port->mac_addr.addr, ETHER_ADDR_LEN);
-	uint16_t _type = 0x01111;
+	uint16_t _type = 0x0800;
 	//eth->type = htons(_type);
-	memcpy(&eth->type, &_type, 2);
-	p += sizeof(struct ethernet_hdr);
-	//memset(p, 0, 40);
-	printf("headroom %u\n", rte_pktmbuf_headroom(mbuf));
-	//uint8_t *pp = (uint8_t *)rte_pktmbuf_prepend(mbuf, sizeof(uint8_t) * 20);
+	//memcpy(&eth->type, &_type, 2);
+	//p += sizeof(struct ethernet_hdr);
+	memset(p, 1, 64);
+	//printf("headroom %u\n", rte_pktmbuf_headroom(mbuf));
+	uint8_t *pp = (uint8_t *)rte_pktmbuf_prepend(mbuf, sizeof(uint8_t) * 14);
 	//eth = (struct ethernet_hdr *)rte_pktmbuf_prepend(mbuf, sizeof(uint8_t) * 20);
-	printf("headroom %u\n", rte_pktmbuf_headroom(mbuf));
 	/*if (p == pp) {
 		printf("p == pp\n");
 	}
@@ -93,11 +92,11 @@ void tx_ether(/*struct rte_mbuf *mbuf, */uint32_t size, struct port_config *port
 		printf("q-20 == pp\n");
 	}*/
 	//memset(pp, (uint8_t)0x01, sizeof(uint8_t) * 20);
-	//eth = pp;
+	eth = pp;
 
-	//rte_memcpy(eth->dest.addr, haddr.addr, ETHER_ADDR_LEN);
-	//rte_memcpy(eth->src.addr, port->mac_addr.addr, ETHER_ADDR_LEN);
-	//eth->type = htons(_type);
+	rte_memcpy(eth->dest.addr, haddr.addr, ETHER_ADDR_LEN);
+	rte_memcpy(eth->src.addr, port->mac_addr.addr, ETHER_ADDR_LEN);
+	eth->type = htons(_type);
 
 	//ret = arp_resolve(paddr, &haddr, p, size);
 	//if (ret != 1) {
@@ -128,7 +127,7 @@ void tx_ether(/*struct rte_mbuf *mbuf, */uint32_t size, struct port_config *port
 	//mbuf->data_len = len;
 	//mbuf->port = port->port_num;
 	//mbuf->packet_type = 1;
-	tx_queue_push(mbuf, len);
+	tx_queue_push(mbuf, len + 14);
 	return;
 }
 
