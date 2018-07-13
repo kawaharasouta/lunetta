@@ -1,6 +1,8 @@
 #ifndef __IP_H_
 #define __IP_H_
 
+#define IP_ADDR_LEN 4
+
 #include<stdint.h>
 
 struct ip_hdr{

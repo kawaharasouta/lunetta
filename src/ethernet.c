@@ -34,6 +34,7 @@ int is_ether_broadcast(ethernet_addr *addr) {
 		if (addr->addr[i] != 0xff)
 			return -1;
 	}
+	return 0;
 }
 
 void print_ethernet_hdr(struct ethernet_hdr *ether_hdr) {
@@ -54,9 +55,6 @@ void tx_ether(struct rte_mbuf *mbuf, uint32_t size, struct port_config *port, ui
 	//struct rte_mbuf *mbuf;
 	//mbuf = rte_pktmbuf_alloc(mbuf_pool);
 	//uint8_t *p = rte_pktmbuf_mtod(mbuf, uint8_t*);
-	//mbuf = rte_pktmbuf_alloc(mbuf_pool);
-  //mbuf->pkt_len = len;
-	//mbuf->data_len = len;
 	mbuf->port = port->port_num;
 	mbuf->packet_type = 1;
 
@@ -74,7 +72,6 @@ void tx_ether(struct rte_mbuf *mbuf, uint32_t size, struct port_config *port, ui
 
 	uint8_t *q = p;
 	struct ethernet_hdr *eth;
-
 	uint16_t _type = 0x0800;
 	//printf("headroom %u\n", rte_pktmbuf_headroom(mbuf));
 	uint8_t *pp = (uint8_t *)rte_pktmbuf_prepend(mbuf, sizeof(uint8_t) * 14);
@@ -132,7 +129,7 @@ void rx_ether(/*struct rte_mbuf *mbuf, uint32_t size*/struct port_config *port) 
 	print_mac_addr(&port->mac_addr);
 
 	
-	if (equal_mac_addr(&port->mac_addr, &packet->src) == 0 | is_ether_broadcast(&packet->src) == 0 ) {
+	if (equal_mac_addr(&port->mac_addr, &packet->dest) == 0 || is_ether_broadcast(&packet->dest) == 0 ) {
 		switch (ntohs(packet->type)) {
 			case ETHERTYPE_IP:
 			{
@@ -145,7 +142,7 @@ void rx_ether(/*struct rte_mbuf *mbuf, uint32_t size*/struct port_config *port) 
 			case ETHERTYPE_ARP:
 			{
 				printf("arp\n");
-				//rx_arp();
+				rx_arp((uint8_t *)pp, pop_size, port);
 				break;
 			}
 			default:
@@ -156,7 +153,7 @@ void rx_ether(/*struct rte_mbuf *mbuf, uint32_t size*/struct port_config *port) 
 		}
 	}
 	else {//different mac addr
-		printf("uooooooooooooooooooooooooooooooooooooooooooooooooooooo\n");
+		printf("different mac addr\n");
 	}
 
 	rte_pktmbuf_free(mbuf);
