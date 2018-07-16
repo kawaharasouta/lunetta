@@ -21,6 +21,7 @@
 
 #include"ethernet.h"
 
+
 struct arp_hdr {
 	uint16_t hrd_type;
 	uint16_t proto_type;

@@ -3,9 +3,13 @@
 #include<string.h>
 #include<stdint.h>
 
+#include<rte_mbuf.h>
+
+#include"include/lunetta.h"
 #include"include/arp.h"
 #include"include/ip.h"
 #include"include/ethernet.h"
+#include"include/pkt_io.h"
 
 #define ARP_TABLE_SIZE 4096
 
@@ -69,7 +73,7 @@ int arp_resolve(const uint32_t *pa, ethernet_addr *ha, const void *data, uint32_
 	ha->addr[2] = 0xff;
 	ha->addr[3] = 0xff;
 	ha->addr[4] = 0xff;
-	ha->addr[5] = 0x0f;
+	ha->addr[5] = 0xff;
 	return 1;
 #else
 	struct arp_entry *entry;
@@ -79,6 +83,7 @@ int arp_resolve(const uint32_t *pa, ethernet_addr *ha, const void *data, uint32_
 	    //pthread_mutex_unlock(&arp.mutex);
 	    return 1;
 	}
+
 	/* If it does not exist in arp_table, save the data in the table and send arp_req. */
 	if (!data) {
 	    //pthread_mutex_unlock(&arp.mutex);
@@ -107,8 +112,37 @@ int arp_resolve(const uint32_t *pa, ethernet_addr *ha, const void *data, uint32_
 #endif
 }
 
-void send_req() {
+void send_req(const uint32_t *tpa, struct port_config *port) {
+	struct rte_mbuf *mbuf;
+	rte_pktmbuf_alloc(mbuf_pool);
 
+	struct arp_ether *request;
+	uint8_t *p = rte_pktmbuf_mtod(mbuf, uint8_t*);
+	request = (struct arp_ether *)p;
+
+	if (!tpa) {
+		return;// -1;
+	}
+	request->arphdr.hrd_type = htons(ARP_HRD_ETHERNET);
+	request->arphdr.proto_type = htons(ETHERTYPE_IP);
+	request->arphdr.hrd_len = 6;
+	request->arphdr.proto_len = 4;
+	request->arphdr.ar_op = htons(ARPOP_REQUEST);
+	//ethernet_get_addr(&request.sha);
+	for(int i = 0; i < ETHER_ADDR_LEN; i++) {
+		request->s_eth_addr.addr[i] = port->mac_addr.addr[i];
+	}
+	//ip_get_addr(&request.spa);
+	request->s_ip_addr = port->ip_addr;
+	memset(&request->d_eth_addr, 0, ETHER_ADDR_LEN);
+	request->d_ip_addr = *tpa;
+
+
+	//if (ethernet_output(ETHERNET_TYPE_ARP, (uint8_t *)&request, sizeof(request), NULL, &ETHERNET_ADDR_BCAST) < 0) {
+	//	return;// -1;
+	//}
+	tx_ether(mbuf, sizeof(struct arp_ether), port, ETHERTYPE_ARP, NULL, &ether_broadcast);
+	return;//  0;
 }
 
 void send_rep() {

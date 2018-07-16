@@ -20,6 +20,7 @@ struct ethernet_hdr {
 	uint16_t type;
 } __attribute__ ((packed));
 
+extern ethernet_addr ether_broadcast;
 
 void print_mac_addr(ethernet_addr *addr);
 int equal_mac_addr(ethernet_addr *addr1, ethernet_addr *addr2);

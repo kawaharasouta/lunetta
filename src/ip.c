@@ -31,7 +31,9 @@ void print_ip_hdr(struct ip_hdr *ip_hdr) {
 
 	//printf("Source IP Address: %s\n", inet_ntoa(ip_hdr->src_addr));
 	//printf("Destination IP Address: %s\n", inet_ntoa(ip_hdr->dest_addr));
+	printf("src ip: ");
 	print_ip_addr(&ip_hdr->src_addr);
+	printf("dest ip: ");
 	print_ip_addr(&ip_hdr->dest_addr);
 	//printf("src ip: %x\n", ip_hdr->src_addr);
 	//printf("dest ip: %x\n", ip_hdr->dest_addr);

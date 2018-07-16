@@ -14,7 +14,7 @@
 #include"include/ip.h"
 #include"include/arp.h"
 
-
+ethernet_addr ether_broadcast = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 
 void print_mac_addr(ethernet_addr *addr) {
 	printf("%02x:%02x:%02x:%02x:%02x:%02x\n",
