@@ -136,9 +136,9 @@ void send_req(const uint32_t *tpa, struct port_config *port) {
 	//if (!port->mac_addr.addr)
 	//	printf("port\n");
 	//ip_get_addr(&request.spa);
-	request->s_ip_addr = port->ip_addr;
+	request->s_ip_addr = htonl(port->ip_addr);
 	memset(&request->d_eth_addr, 0, ETHER_ADDR_LEN);
-	request->d_ip_addr = *tpa;
+	request->d_ip_addr = htonl(*tpa);
 
 
 	//if (ethernet_output(ETHERNET_TYPE_ARP, (uint8_t *)&request, sizeof(request), NULL, &ETHERNET_ADDR_BCAST) < 0) {
@@ -169,7 +169,7 @@ void rx_arp(uint8_t *packet, uint32_t size, struct port_config *port) {
 	if (hdr->arphdr.proto_len != IP_ADDR_LEN) return;
 
 	//arp req or rep
-	switch(hdr->arphdr.ar_op) {
+	switch(ntohs(hdr->arphdr.ar_op)) {
 		case ARPOP_REQUEST:
 		{
 			printf("arp req\n");
@@ -182,7 +182,7 @@ void rx_arp(uint8_t *packet, uint32_t size, struct port_config *port) {
 		}
 		default:
 		{
-			printf("arp uooooooooooooooooo\n");
+			printf("arp no op\n");
 			break;
 		}
 	}

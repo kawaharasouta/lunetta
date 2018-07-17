@@ -12,6 +12,7 @@ struct port_config {
 	uint32_t ip_gateway;
 };
 
+void port_setup(struct port_config *port);
 int lunetta_init();
 
 #endif
