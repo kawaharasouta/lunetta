@@ -1,7 +1,8 @@
 #ifndef __LUNETTA_H_
-#define __LUNETTA_H
+#define __LUNETTA_H_
 
 #include"ethernet.h"
+//extern struct ethernet_addr;
 
 struct port_config {
 	uint16_t port_num;

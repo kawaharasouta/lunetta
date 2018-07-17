@@ -84,7 +84,9 @@ int main(int argc, char **argv){
 
 #if 1//!!!!!!!! tx_ether
 
-		tx_ether(mbuf, 0, &port, 0x0800, NULL, NULL);
+		//tx_ether(mbuf, 0, &port, 0x0800, NULL, NULL);
+		uint32_t q = 0x0a000003;
+		send_req(&q, &port);
 #else
 		struct rte_mbuf *mbuf;
 		ethernet_addr haddr;

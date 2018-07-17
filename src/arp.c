@@ -5,7 +5,6 @@
 
 #include<rte_mbuf.h>
 
-#include"include/lunetta.h"
 #include"include/arp.h"
 #include"include/ip.h"
 #include"include/ethernet.h"
@@ -66,8 +65,8 @@ int arp_table_select(const uint32_t *pa, ethernet_addr *ha) {
 	return -1;
 }
 
-int arp_resolve(const uint32_t *pa, ethernet_addr *ha, const void *data, uint32_t size) {
-#if 1	/* test */
+int arp_resolve(const uint32_t *pa, ethernet_addr *ha, const void *data, uint32_t size, struct port_config *port) {
+#if 0	/* test */
 	ha->addr[0] = 0xff;
 	ha->addr[1] = 0xff;
 	ha->addr[2] = 0xff;
@@ -106,7 +105,7 @@ int arp_resolve(const uint32_t *pa, ethernet_addr *ha, const void *data, uint32_
 	arp_table.table.head = entry;
 	entry->pa = *pa;
 	time(&entry->timestamp);
-	send_req(pa);
+	send_req(pa, port);
 	//pthread_mutex_unlock(&arp.mutex);
 	return  0;
 #endif
@@ -114,7 +113,7 @@ int arp_resolve(const uint32_t *pa, ethernet_addr *ha, const void *data, uint32_
 
 void send_req(const uint32_t *tpa, struct port_config *port) {
 	struct rte_mbuf *mbuf;
-	rte_pktmbuf_alloc(mbuf_pool);
+	mbuf = rte_pktmbuf_alloc(mbuf_pool);
 
 	struct arp_ether *request;
 	uint8_t *p = rte_pktmbuf_mtod(mbuf, uint8_t*);
@@ -132,6 +131,10 @@ void send_req(const uint32_t *tpa, struct port_config *port) {
 	for(int i = 0; i < ETHER_ADDR_LEN; i++) {
 		request->s_eth_addr.addr[i] = port->mac_addr.addr[i];
 	}
+	//if (!request->s_eth_addr.addr)
+	//	printf("req\n");
+	//if (!port->mac_addr.addr)
+	//	printf("port\n");
 	//ip_get_addr(&request.spa);
 	request->s_ip_addr = port->ip_addr;
 	memset(&request->d_eth_addr, 0, ETHER_ADDR_LEN);

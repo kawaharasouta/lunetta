@@ -19,8 +19,10 @@
 #define ARPOP_InREPLY 9   /* InARP reply.  */
 #define ARPOP_NAK 10    /* (ATM)ARP NAK.  */
 
-#include"ethernet.h"
-
+//#include"ethernet.h"
+//extern struct ethernet_addr;
+#include"lunetta.h"
+//extern struct port_config;
 
 struct arp_hdr {
 	uint16_t hrd_type;
@@ -40,7 +42,7 @@ struct arp_ether {
 
 
 
-int arp_resolve(const uint32_t *ip_addr, ethernet_addr *ether_addr, const void *data, uint32_t size);
+int arp_resolve(const uint32_t *ip_addr, ethernet_addr *ether_addr, const void *data, uint32_t size, struct port_config *port);
 void tx_arp();
 void rx_arp(uint8_t *packet, uint32_t size, struct port_config *port);
 

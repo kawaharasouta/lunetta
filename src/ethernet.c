@@ -30,11 +30,13 @@ int equal_mac_addr(ethernet_addr *addr1, ethernet_addr *addr2) {
 }
 
 int is_ether_broadcast(ethernet_addr *addr) {
+	if (!addr)
+		return 0;
 	for (int i = 0; i < ETHER_ADDR_LEN; i++) {
 		if (addr->addr[i] != 0xff)
-			return -1;
+			return 0;
 	}
-	return 0;
+	return 1;
 }
 
 void print_ethernet_hdr(struct ethernet_hdr *ether_hdr) {
@@ -51,12 +53,39 @@ void tx_ether(struct rte_mbuf *mbuf, uint32_t size, struct port_config *port, ui
 	int ret;
 	uint32_t len;/* = 64;*/
 	ethernet_addr haddr;
+	struct ethernet_hdr *eth;
 
 	//struct rte_mbuf *mbuf;
 	//mbuf = rte_pktmbuf_alloc(mbuf_pool);
 	//uint8_t *p = rte_pktmbuf_mtod(mbuf, uint8_t*);
 	mbuf->port = port->port_num;
 	mbuf->packet_type = 1;
+
+	if (is_ether_broadcast(dest)) {
+		uint8_t *pp = (uint8_t *)rte_pktmbuf_prepend(mbuf, sizeof(uint8_t) * 14);
+		if (!pp) {
+			printf("mbuf prepend error\n");
+			return;
+		}
+		eth = (struct ethernet_hdr *)pp;
+		rte_memcpy(eth->dest.addr, dest, ETHER_ADDR_LEN);
+		rte_memcpy(eth->src.addr, port->mac_addr.addr, ETHER_ADDR_LEN);
+		eth->type = htons(type);
+
+		len = sizeof(struct ethernet_hdr) + size;
+		if (len < 64) {
+			pp += len;
+			memset(pp, 1, 40);
+			len = 64;
+		}
+		else if (size > 1512) {
+			return;
+		}
+		mbuf->pkt_len = len;
+		mbuf->data_len = len;
+		tx_queue_push(mbuf, len);
+		return;
+	}
 
 	//haddr.addr[0] = 0xff;
   //haddr.addr[1] = 0xff;
@@ -65,13 +94,12 @@ void tx_ether(struct rte_mbuf *mbuf, uint32_t size, struct port_config *port, ui
   //haddr.addr[4] = 0xff;
   //haddr.addr[5] = 0xff;
 	uint8_t *p = rte_pktmbuf_mtod(mbuf, uint8_t*);
-	ret = arp_resolve(paddr, &haddr, p, size);
+	ret = arp_resolve(paddr, &haddr, p, size, port);
 	if (ret != 1) {
 		return;
 	}
 
 	uint8_t *q = p;
-	struct ethernet_hdr *eth;
 	uint16_t _type = 0x0800;
 	//printf("headroom %u\n", rte_pktmbuf_headroom(mbuf));
 	uint8_t *pp = (uint8_t *)rte_pktmbuf_prepend(mbuf, sizeof(uint8_t) * 14);
@@ -79,7 +107,7 @@ void tx_ether(struct rte_mbuf *mbuf, uint32_t size, struct port_config *port, ui
 		printf("mbuf prepend error\n");
 		return;
 	}
-	eth = pp;
+	eth = (struct ethernet_hdr *)pp;
 
 	//! make ether header
 	rte_memcpy(eth->dest.addr, haddr.addr, ETHER_ADDR_LEN);

@@ -9,6 +9,7 @@
 #define ETHER_ADDR_LEN 6
 
 extern struct port_config;
+//#include"lunetta.h"
 
 typedef struct {
 	uint8_t addr[ETHER_ADDR_LEN];
