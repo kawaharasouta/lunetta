@@ -44,7 +44,7 @@ APP = main
 # all source are stored in SRCS-y
 SRCS-y := pkt_io.c ethernet.c ip.c main.c lunetta.c arp.c
 
-CFLAGS += -g -O3 -lpthread -pthread 
+CFLAGS += -g -lpthread -pthread 
 #CFLAGS += $(WERROR_FLAGS)
 
 include $(RTE_SDK)/mk/rte.extapp.mk

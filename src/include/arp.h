@@ -41,7 +41,7 @@ struct arp_ether {
 } __attribute__ ((packed));
 
 
-
+void arp_init(struct port_config *port);
 int arp_resolve(const uint32_t *ip_addr, ethernet_addr *ether_addr, const void *data, uint32_t size, struct port_config *port);
 void tx_arp();
 void rx_arp(uint8_t *packet, uint32_t size, struct port_config *port);

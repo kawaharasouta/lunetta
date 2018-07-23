@@ -31,9 +31,10 @@ static struct {
 		struct arp_entry *pool;
 	} table;
 	//pthread_mutex_t mutex;
+	struct port_config *port;
 } arp_table;
 
-void arp_init() {
+void arp_init(struct port_config *port) {
 	int i;
 	struct arp_entry *entry;
 	
@@ -50,6 +51,9 @@ void arp_init() {
 	}
 	arp_table.table.head = NULL;
 	arp_table.table.pool = arp_table.table.table;
+
+	arp_table.port = port;
+
 	//pthread_mutex_init(&arp.mutex, NULL);
 	return 0;
 }
@@ -63,6 +67,33 @@ int arp_table_select(const uint32_t *pa, ethernet_addr *ha) {
 		}
 	}
 	return -1;
+}
+
+int arp_table_renew(const uint32_t *pa, const ethernet_addr *ha) {
+	struct arp_entry *entry;
+
+	for (entry = arp_table.table.head; entry; entry = entry->next) {
+		if (entry->pa == *pa) {
+			memcpy(&entry->ha, ha, sizeof(ethernet_addr_t));
+			time(&entry->timestamp);
+			//pthread_cond_broadcast(&entry->cond);
+			if (entry->data) {
+				//ethernet_output(ETHERNET_TYPE_IP, (uint8_t *)entry->data, entry->len, NULL, &entry->ha);
+				struct rte_mbuf *mbuf;
+				mbuf = rte_pktmbuf_alloc(mbuf_pool);
+				uint8_t *p = rte_pktmbuf_mtod(mbuf, uint8_t*);
+				rte_memcpy(p, entry->data, entry->size);
+			
+				tx_ether(mbuf, entry->size, port, ETHERTYPE_IP, pa, ha);
+
+				free(entry->data);
+				entry->data = NULL;
+				entry->len = 0;
+			}
+			return 0;
+		}
+	}
+	return -1;	
 }
 
 int arp_resolve(const uint32_t *pa, ethernet_addr *ha, const void *data, uint32_t size, struct port_config *port) {
@@ -158,6 +189,7 @@ void tx_arp() {
 
 void rx_arp(uint8_t *packet, uint32_t size, struct port_config *port) {
 	struct arp_ether *hdr;
+	int merge_flag = 0;
 	
 	if (size < sizeof(struct arp_ether)) 
 		return;
@@ -167,6 +199,9 @@ void rx_arp(uint8_t *packet, uint32_t size, struct port_config *port) {
 	if (ntohs(hdr->arphdr.proto_type) != ETHERTYPE_IP) return;
 	if (hdr->arphdr.hrd_len != ETHER_ADDR_LEN) return;
 	if (hdr->arphdr.proto_len != IP_ADDR_LEN) return;
+
+
+
 
 	//arp req or rep
 	switch(ntohs(hdr->arphdr.ar_op)) {

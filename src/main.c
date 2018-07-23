@@ -15,6 +15,7 @@
 #include"include/lunetta.h"
 #include"include/pkt_io.h"
 #include"include/ethernet.h"
+#include"include/arp.h"
 
 
 
@@ -27,6 +28,7 @@ int main(int argc, char **argv){
 	port.port_num = 0;
 	port_init(&port);
 	port_setup(&port);
+	arp_init(&port);
 
 	print_mac_addr(&port.mac_addr);
 	
