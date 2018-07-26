@@ -35,7 +35,16 @@ static struct {
 } arp_table;
 
 void arp_table_dump() {
-	
+	struct arp_entry *entry;
+	printf("===========arp_table_dump==========\n");
+	for (entry = arp_table.table.head; entry; entry = entry->next) {
+		printf("----------------------------------\n");
+		printf("ip addr: %x\tmac addr: ", entry->ha);
+		print_mac_addr(&entry->ha);
+	}
+	printf("-----------end table--------------\n");
+
+	return;
 }
 
 void arp_init(struct port_config *port) {
@@ -226,16 +235,20 @@ void rx_arp(uint8_t *packet, uint32_t size, struct port_config *port) {
 	merge_flag = arp_table_renew(&hdr->s_ip_addr, &hdr->s_eth_addr);
 
 	printf("port ipaddr: %x\nhdr d ipaddr: %x\n", port->ip_addr, hdr->d_ip_addr);
+	printf("merge_flag: %d\n", merge_flag);
 
-	if (hdr->d_ip_addr == port->ip_addr) {
-		printf("hdr->d_ip_addr == port->ip_addr");
-		if (!merge_flag) {
+	if (htonl(hdr->d_ip_addr) == port->ip_addr) {
+//		printf("hdr->d_ip_addr == port->ip_addr\n");
+		if (merge_flag == 0) {
+			printf("arp_table_insert\n");
 			arp_table_insert(&hdr->s_ip_addr, &hdr->s_eth_addr);
 		}
 		if (ntohs(hdr->arphdr.ar_op) == ARPOP_REQUEST) {
 			printf("arp req");
 		}
 	}
+
+	arp_table_dump();
 
 	//arp req or rep
 	/*
