@@ -295,7 +295,7 @@ dpdk_init(void){
 	int ret;
 	unsigned nb_ports;
 	uint16_t portid;  
-	char *pg_name[] = {"kkk"};
+	char *pg_name[] = {"lunetta"};
 
 	ret = rte_eal_init(1, pg_name);
 	if (ret < 0) {
