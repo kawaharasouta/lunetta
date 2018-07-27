@@ -31,12 +31,12 @@ int equal_mac_addr(ethernet_addr *addr1, ethernet_addr *addr2) {
 
 int is_ether_broadcast(ethernet_addr *addr) {
 	if (!addr)
-		return 0;
+		return -1;
 	for (int i = 0; i < ETHER_ADDR_LEN; i++) {
 		if (addr->addr[i] != 0xff)
-			return 0;
+			return -1;
 	}
-	return 1;
+	return 0;
 }
 
 void print_ethernet_hdr(struct ethernet_hdr *ether_hdr) {

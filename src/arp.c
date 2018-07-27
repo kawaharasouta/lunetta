@@ -209,8 +209,34 @@ void send_req(const uint32_t *tpa, struct port_config *port) {
 	return;//  0;
 }
 
-void send_rep() {
+void send_rep(const uint32_t *tpa, const ethernet_addr *tha, struct port_config *port) {
+	struct rte_mbuf *mbuf;
+	mbuf = rte_pktmbuf_alloc(mbuf_pool);
 
+	struct arp_ether *rep;
+	uint8_t *p = rte_pktmbuf_mtod(mbuf, uint8_t*);
+	rep = (struct arp_ether *)p;
+
+	if (!tpa || !tha) {
+		return;// -1;
+	}
+	rep->arphdr.hrd_type = htons(ARP_HRD_ETHERNET);
+	rep->arphdr.proto_type = htons(ETHERTYPE_IP);
+	rep->arphdr.hrd_len = 6;
+	rep->arphdr.proto_len = 4;
+	rep->arphdr.ar_op = htons(ARPOP_REPLY);
+	//ethernet_get_addr(&request.sha);
+	for (int i = 0; i < ETHER_ADDR_LEN; i++) {
+		rep->s_eth_addr.addr[i] = port->mac_addr.addr[i];
+	}
+	rep->s_ip_addr = htonl(port->ip_addr);
+	//memset(&request->d_eth_addr, 0, ETHER_ADDR_LEN);
+	for (int i = 0; i < ETHER_ADDR_LEN; i++) {
+		rep->d_eth_addr.addr[i] = tha->addr[i];
+	}
+	rep->d_ip_addr = htonl(*tpa);
+
+	tx_ether(mbuf, sizeof(struct arp_ether), port, ETHERTYPE_ARP, NULL, NULL);
 }
 
 void tx_arp() {
@@ -245,6 +271,7 @@ void rx_arp(uint8_t *packet, uint32_t size, struct port_config *port) {
 		}
 		if (ntohs(hdr->arphdr.ar_op) == ARPOP_REQUEST) {
 			printf("arp req");
+			send_rep(&hdr->s_ip_addr, &hdr->s_eth_addr, arp_table.port);
 		}
 	}
 
