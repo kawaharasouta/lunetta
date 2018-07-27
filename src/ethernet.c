@@ -75,7 +75,7 @@ void tx_ether(struct rte_mbuf *mbuf, uint32_t size, struct port_config *port, ui
 		len = sizeof(struct ethernet_hdr) + size;
 		if (len < 64) {
 			pp += len;
-			memset(pp, 1, 40);
+			memset(pp, 1, 64 - len);
 			len = 64;
 		}
 		else if (size > 1512) {
@@ -112,7 +112,7 @@ void tx_ether(struct rte_mbuf *mbuf, uint32_t size, struct port_config *port, ui
 	//! make ether header
 	rte_memcpy(eth->dest.addr, haddr.addr, ETHER_ADDR_LEN);
 	rte_memcpy(eth->src.addr, port->mac_addr.addr, ETHER_ADDR_LEN);
-	eth->type = htons(_type);
+	eth->type = htons(type);
 
 	len = sizeof(struct ethernet_hdr) + size;
 	if (len < 64) {

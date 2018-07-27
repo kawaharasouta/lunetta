@@ -42,7 +42,7 @@ void arp_table_dump() {
 		printf("ip addr: %x\tmac addr: ", entry->ha);
 		print_mac_addr(&entry->ha);
 	}
-	printf("-----------end table--------------\n");
+	printf("=============end table==============\n");
 
 	return;
 }
