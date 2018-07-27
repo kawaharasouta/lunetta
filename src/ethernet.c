@@ -61,7 +61,7 @@ void tx_ether(struct rte_mbuf *mbuf, uint32_t size, struct port_config *port, ui
 	mbuf->port = port->port_num;
 	mbuf->packet_type = 1;
 
-	if (is_ether_broadcast(dest)) {
+	if (is_ether_broadcast(dest) == 0) {
 		uint8_t *pp = (uint8_t *)rte_pktmbuf_prepend(mbuf, sizeof(uint8_t) * 14);
 		if (!pp) {
 			printf("mbuf prepend error\n");
