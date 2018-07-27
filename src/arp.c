@@ -74,6 +74,7 @@ void arp_init(struct port_config *port) {
 int arp_table_select(const uint32_t *pa, ethernet_addr *ha) {
 	struct arp_entry *entry;
 	for (entry = arp_table.table.head; entry; entry = entry->next) {
+		if (!entry) printf("!entry\n");
 		if (entry->pa == *pa) {
 			memcpy(ha, &entry->ha, sizeof(ethernet_addr));
 			return 0;
@@ -236,7 +237,7 @@ void send_rep(const uint32_t *tpa, const ethernet_addr *tha, struct port_config 
 	}
 	rep->d_ip_addr = htonl(*tpa);
 
-	tx_ether(mbuf, sizeof(struct arp_ether), port, ETHERTYPE_ARP, NULL, NULL);
+	tx_ether(mbuf, sizeof(struct arp_ether), port, ETHERTYPE_ARP, tpa, NULL);
 }
 
 void tx_arp() {
