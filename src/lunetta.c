@@ -20,13 +20,11 @@ void port_setup(struct port_config *port) {
 	return;
 }
 
-
 int lunetta_init() {
 	if (dpdk_init() == -1) {
 		fprintf(stderr, "error dpdk_init");
 		return -1;
 	}
-
 
 	return 0;
 }

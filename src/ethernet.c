@@ -55,9 +55,6 @@ void tx_ether(struct rte_mbuf *mbuf, uint32_t size, struct port_config *port, ui
 	ethernet_addr haddr;
 	struct ethernet_hdr *eth;
 
-	//struct rte_mbuf *mbuf;
-	//mbuf = rte_pktmbuf_alloc(mbuf_pool);
-	//uint8_t *p = rte_pktmbuf_mtod(mbuf, uint8_t*);
 	mbuf->port = port->port_num;
 	mbuf->packet_type = 1;
 
@@ -87,12 +84,6 @@ void tx_ether(struct rte_mbuf *mbuf, uint32_t size, struct port_config *port, ui
 		return;
 	}
 
-	//haddr.addr[0] = 0xff;
-  //haddr.addr[1] = 0xff;
-  //haddr.addr[2] = 0xff;
-  //haddr.addr[3] = 0xff;
-  //haddr.addr[4] = 0xff;
-  //haddr.addr[5] = 0xff;
 	uint8_t *p = rte_pktmbuf_mtod(mbuf, uint8_t*);
 	ret = arp_resolve(paddr, &haddr, p, size, port);
 	if (ret != 1) {
@@ -101,15 +92,13 @@ void tx_ether(struct rte_mbuf *mbuf, uint32_t size, struct port_config *port, ui
 
 	uint8_t *q = p;
 	uint16_t _type = 0x0800;
-	//printf("headroom %u\n", rte_pktmbuf_headroom(mbuf));
 	uint8_t *pp = (uint8_t *)rte_pktmbuf_prepend(mbuf, sizeof(uint8_t) * 14);
 	if (!pp) {
 		printf("mbuf prepend error\n");
 		return;
 	}
-	eth = (struct ethernet_hdr *)pp;
 
-	//! make ether header
+	eth = (struct ethernet_hdr *)pp;
 	rte_memcpy(eth->dest.addr, haddr.addr, ETHER_ADDR_LEN);
 	rte_memcpy(eth->src.addr, port->mac_addr.addr, ETHER_ADDR_LEN);
 	eth->type = htons(type);
@@ -117,7 +106,7 @@ void tx_ether(struct rte_mbuf *mbuf, uint32_t size, struct port_config *port, ui
 	len = sizeof(struct ethernet_hdr) + size;
 	if (len < 64) {
 		pp += len;
-		memset(pp, 1, 40);
+		memset(pp, 1, 64 - len);
 		len = 64;
 	}
 	else if (size > 1512) {
@@ -125,8 +114,6 @@ void tx_ether(struct rte_mbuf *mbuf, uint32_t size, struct port_config *port, ui
 	}
 	mbuf->pkt_len = len;
 	mbuf->data_len = len;
-	//mbuf->port = port->port_num;
-	//mbuf->packet_type = 1;
 	tx_queue_push(mbuf, len);
 	return;
 }
@@ -141,9 +128,6 @@ void rx_ether(/*struct rte_mbuf *mbuf, uint32_t size*/struct port_config *port) 
 		return;
 
 	uint32_t *p = rte_pktmbuf_mtod(mbuf, uint8_t*);
-	//rte_hexdump(stdout, "", (const void *)p, pop_size);
-
-
 	struct ethernet_hdr *packet = (struct ethernet_hdr *)p;
 	uint8_t *pp = (uint8_t *)p;
 
@@ -163,8 +147,6 @@ void rx_ether(/*struct rte_mbuf *mbuf, uint32_t size*/struct port_config *port) 
 			{
 				printf("ip\n");
 				rx_ip((uint8_t *)pp, pop_size, port);
-				//struct ip_hdr *ip = (struct ip_hdr *)p;
-				//printf("version: %u\n", ip->version);
 				break;
 			}
 			case ETHERTYPE_ARP:

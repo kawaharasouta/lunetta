@@ -128,15 +128,6 @@ int arp_table_insert(const uint32_t *pa, const ethernet_addr *ha) {
 }
 
 int arp_resolve(const uint32_t *pa, ethernet_addr *ha, const void *data, uint32_t size, struct port_config *port) {
-#if 0	/* test */
-	ha->addr[0] = 0xff;
-	ha->addr[1] = 0xff;
-	ha->addr[2] = 0xff;
-	ha->addr[3] = 0xff;
-	ha->addr[4] = 0xff;
-	ha->addr[5] = 0xff;
-	return 1;
-#else
 	struct arp_entry *entry;
 	
 	//pthread_mutex_lock(&arp.mutex);
@@ -170,7 +161,6 @@ int arp_resolve(const uint32_t *pa, ethernet_addr *ha, const void *data, uint32_
 	send_req(pa, port);
 	//pthread_mutex_unlock(&arp.mutex);
 	return  0;
-#endif
 }
 
 void send_req(const uint32_t *tpa, struct port_config *port) {
@@ -189,23 +179,13 @@ void send_req(const uint32_t *tpa, struct port_config *port) {
 	request->arphdr.hrd_len = 6;
 	request->arphdr.proto_len = 4;
 	request->arphdr.ar_op = htons(ARPOP_REQUEST);
-	//ethernet_get_addr(&request.sha);
 	for(int i = 0; i < ETHER_ADDR_LEN; i++) {
 		request->s_eth_addr.addr[i] = port->mac_addr.addr[i];
 	}
-	//if (!request->s_eth_addr.addr)
-	//	printf("req\n");
-	//if (!port->mac_addr.addr)
-	//	printf("port\n");
-	//ip_get_addr(&request.spa);
 	request->s_ip_addr = htonl(port->ip_addr);
 	memset(&request->d_eth_addr, 0, ETHER_ADDR_LEN);
 	request->d_ip_addr = htonl(*tpa);
 
-
-	//if (ethernet_output(ETHERNET_TYPE_ARP, (uint8_t *)&request, sizeof(request), NULL, &ETHERNET_ADDR_BCAST) < 0) {
-	//	return;// -1;
-	//}
 	tx_ether(mbuf, sizeof(struct arp_ether), port, ETHERTYPE_ARP, NULL, &ether_broadcast);
 	return;//  0;
 }
@@ -226,12 +206,10 @@ void send_rep(const uint32_t *tpa, const ethernet_addr *tha, struct port_config 
 	rep->arphdr.hrd_len = 6;
 	rep->arphdr.proto_len = 4;
 	rep->arphdr.ar_op = htons(ARPOP_REPLY);
-	//ethernet_get_addr(&request.sha);
 	for (int i = 0; i < ETHER_ADDR_LEN; i++) {
 		rep->s_eth_addr.addr[i] = port->mac_addr.addr[i];
 	}
 	rep->s_ip_addr = htonl(port->ip_addr);
-	//memset(&request->d_eth_addr, 0, ETHER_ADDR_LEN);
 	for (int i = 0; i < ETHER_ADDR_LEN; i++) {
 		rep->d_eth_addr.addr[i] = tha->addr[i];
 	}
@@ -265,39 +243,13 @@ void rx_arp(uint8_t *packet, uint32_t size, struct port_config *port) {
 	printf("merge_flag: %d\n", merge_flag);
 
 	if (htonl(hdr->d_ip_addr) == port->ip_addr) {
-//		printf("hdr->d_ip_addr == port->ip_addr\n");
-		if (merge_flag == 0) {
-			printf("arp_table_insert\n");
+		if (merge_flag == 0)
 			arp_table_insert(&hdr->s_ip_addr, &hdr->s_eth_addr);
-		}
-		if (ntohs(hdr->arphdr.ar_op) == ARPOP_REQUEST) {
-			printf("arp req");
+		if (ntohs(hdr->arphdr.ar_op) == ARPOP_REQUEST)
 			send_rep(&hdr->s_ip_addr, &hdr->s_eth_addr, arp_table.port);
-		}
 	}
 
 	arp_table_dump();
-
-	//arp req or rep
-	/*
-	switch(ntohs(hdr->arphdr.ar_op)) {
-		case ARPOP_REQUEST:
-		{
-			printf("arp req\n");
-			break;
-		}
-		case ARPOP_REPLY:
-		{
-			printf("arp rep\n");
-			break;
-		}
-		default:
-		{
-			printf("arp no op\n");
-			break;
-		}
-	}
-	*/
 
 	return;
 }
