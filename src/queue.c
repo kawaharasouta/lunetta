@@ -51,28 +51,36 @@ void queue_push(struct queue_info *queue, void *data, uint32_t size) {
   //!it is really wrong
   node->size = size;
   node->next = NULL;
-#if 1
-  if (!tx_queue.head){
-    tx_queue.head = pkt;
-    tx_queue.tail = pkt;
+
+  if (!queue->head){
+   queue->head = node;
+   queue->tail = node;
     return;
   }
-  tx_queue.tail->next = pkt;
-  tx_queue.tail = pkt;
-#else
-  if (rx_queue.tail) {
-    rx_queue.tail->next = pkt;
-  }
-  rx_queue.tail = pkt;
-  if (!rx_queue.head){
-    rx_queue.head = pkt;
-  }
-#endif
+  queue->tail->next = node;
+  queue->tail = node;
 
   //pthread_mutex_unlock(&tx_queue.mutex);
   return;
 }
 
+struct queue_node* queue_pop(struct queue_info *queue) {
+	if (queue->head == NULL) 
+		return NULL;
+	
+	//pthread_mutex_lock(&rx_queue.mutex);
+	queue->num -= 1;
+	//void *ret;// = (struct rte_mbuf *)malloc(sizeof(struct rte_mbuf *));
+	struct queue_node *ret = queue->head; 
+	//ret = rx_queue.head->data;
+	//*size = rx_queue.head->size;
+	//struct pkt_queue *dust = rx_queue.head;
+	queue->head = queue->head->next;
+	//free((struct pkt_queue *)dust);
+	//if head is NULL, tail can be anything
+	//pthread_mutex_unlock(&rx_queue.mutex);
+	return ret;
+}
 
 
 
@@ -81,8 +89,20 @@ void queue_push(struct queue_info *queue, void *data, uint32_t size) {
 int main(void) {
 	struct queue_info queue;
 
+	printf("*********\n");
 	if (!queue_init(&queue))
 		printf("queue_init error no tumori ha-to\n");
+
+
+	int a = 0;
+	int b = 1;
+	//
+	printf("*******\n");
+	queue_push(&queue, &a, sizeof(a));
+
+
+
+	return 0;
 }
 
 #endif
