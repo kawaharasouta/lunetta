@@ -16,208 +16,17 @@
 #include"include/lunetta.h"
 #include"include/pkt_io.h"
 #include"include/ethernet.h"
+#include"include/queue.h"
 
 #define QUEUE_SIZE 10000
 
-#if 0
-struct queue_info{
-	int num;
-	struct pkt_queue *head;
-	struct pkt_queue *tail;
-	pthread_mutex_t mutex;
-};
-struct pkt_queue {
-	struct rte_mbuf *mbuf;
-	uint32_t size;
-	struct pkt_queue *next;
-};
-#endif
-
-struct queue_info tx_queue;
-struct queue_info rx_queue;
-
-/* Memory management. allocate_pool is not necessary to be global. */
-struct allocate_pool {
-	uint16_t num;
-	//struct pkt_queue *head;
-	struct pkt_queue *head;
-	struct pkt_queue *tail;
-	struct pkt_queue *next;
-} allocate_pool;
-void allocate_pool_brk() {
-	//allocate_pool.head = (struct pkt_queue *)malloc(sizeof(struct pkt_queue) * 2);
-
-	//struct pkt_queue *pool = (struct pkt_queue *)malloc(sizeof(struct pkt_queue) * 2);
-	//*allocate_pool.head = pool;
-
-	allocate_pool.head = (struct pkt_queue *)malloc(sizeof(struct pkt_queue) * QUEUE_SIZE);
-	allocate_pool.next = allocate_pool.head;
-	allocate_pool.tail = allocate_pool.head + QUEUE_SIZE - 1;
-	
-	/*for (int i = 0; i < 1000; i++){
-		allocate_pool.head[i] = (struct pkt_queue *)malloc(sizeof(struct pkt_queue *));
-	}*/
-	allocate_pool.num = QUEUE_SIZE;
-}
-struct pkt_queue* allocate_pkt_queue() {
-#if 0
-	if (allocate_pool.num <= 0) {
-		allocate_pool_brk();
-	}
-	struct pkt_queue *ret = allocate_pool.head;
-	//allocate_pool.head += sizeof(struct allocate_pool *);
-	allocate_pool.head++;
-	//return ret;
-	allocate_pool.num--;
-	//return allocate_pool.head[/*(500 - 1) - */allocate_pool.num];
-	return ret;
-#else
-	struct pkt_queue *ret = allocate_pool.next;
-
-	if (allocate_pool.next == allocate_pool.tail) {
-		allocate_pool.next = allocate_pool.head;
-	}
-	else {
-		allocate_pool.next++;
-	}
-
-	return ret;
-#endif
-}
-/*************************************/
-void queue_init() {
-	tx_queue.head = NULL;
-	tx_queue.tail = NULL;
-	tx_queue.num = 0;
-	pthread_mutex_init(&tx_queue.mutex, NULL);
-
-	rx_queue.head = NULL;
-	rx_queue.tail = NULL;
-	rx_queue.num = 0;
-
-	pthread_mutex_init(&rx_queue.mutex, NULL);
-
-	allocate_pool_brk();
-}
-
-void tx_queue_push(struct rte_mbuf *mbuf, uint32_t size) {
-	if (mbuf == NULL)
-		return;
-
-	//pthread_mutex_lock(&tx_queue.mutex);
-	tx_queue.num += 1;
-	//struct pkt_queue *pkt = (struct pkt_queue *)malloc(sizeof(struct pkt_queue));
-	struct pkt_queue *pkt = allocate_pkt_queue();
-	pkt->mbuf = mbuf;
-	//!it is really wrong
-	pkt->size = size;
-	pkt->next = NULL;
-#if 1
-	if (!tx_queue.head){
-		tx_queue.head = pkt;
-		tx_queue.tail = pkt;
-		return;
-	}
-	tx_queue.tail->next = pkt;
-	tx_queue.tail = pkt;
-#else
-	if (rx_queue.tail) {
-    rx_queue.tail->next = pkt;
-  }
-  rx_queue.tail = pkt;
-  if (!rx_queue.head){
-    rx_queue.head = pkt;
-  }
-#endif
-
-	//pthread_mutex_unlock(&tx_queue.mutex);
-	return;
-}
-
-struct rte_mbuf* tx_queue_pop() {
-	if (tx_queue.head == NULL) {
-		return NULL;
-	}
-	//pthread_mutex_lock(&tx_queue.mutex);
-
-	tx_queue.num -= 1;
-	struct rte_mbuf *ret;// = (struct rte_mbuf *)malloc(sizeof(struct rte_mbuf *));
-	ret = tx_queue.head->mbuf;
-	struct pkt_queue *dust = tx_queue.head;
-	tx_queue.head = tx_queue.head->next;
-	//free((struct pkt_queue *)dust);
-	//if head is NULL, tail can be anything
-	//pthread_mutex_unlock(&tx_queue.mutex);
-	return ret;
-}
-
-void rx_queue_push(struct rte_mbuf *mbuf, uint32_t size) {
-	if (mbuf == NULL)
-		return;
-
-	if (size > 1512) {
-		return;
-	}
-
-	//pthread_mutex_lock(&rx_queue.mutex);
-	rx_queue.num += 1;
-	//struct pkt_queue *pkt = (struct pkt_queue *)malloc(sizeof(struct pkt_queue));
-	struct pkt_queue *pkt = allocate_pkt_queue();
-	pkt->mbuf = mbuf;
-	pkt->size = size;
-	pkt->next = NULL;
-#if 1
-	if (!rx_queue.head){
-		rx_queue.head = pkt;
-		rx_queue.tail = pkt;
-		return;
-	}
-
-	rx_queue.tail->next = pkt;
-	rx_queue.tail = pkt;
-#else
-	if (rx_queue.tail) {
-    rx_queue.tail->next = pkt;
-  }
-  rx_queue.tail = pkt;
-  if (!rx_queue.head){
-    rx_queue.head = pkt;
-  }
-#endif
-	//pthread_mutex_unlock(&rx_queue.mutex);
-	return;
-}
-
-struct rte_mbuf* rx_queue_pop(uint32_t *size) {
-	if (rx_queue.head == NULL) {
-		return NULL;
-	}
-
-	//pthread_mutex_lock(&rx_queue.mutex);
-	rx_queue.num -= 1;
-	struct rte_mbuf *ret;// = (struct rte_mbuf *)malloc(sizeof(struct rte_mbuf *));
-	ret = rx_queue.head->mbuf;
-	*size = rx_queue.head->size;
-	struct pkt_queue *dust = rx_queue.head;
-	rx_queue.head = rx_queue.head->next;
-	//free((struct pkt_queue *)dust);
-	//if head is NULL, tail can be anything
-	//pthread_mutex_unlock(&rx_queue.mutex);
-	return ret;
-}
-
-#if 0
-struct port {
-  uint8_t port_num;
-}
-#endif
+//struct queue_info tx_queue;
+//struct queue_info rx_queue;
 
 struct rte_mempool *mbuf_pool;
-
 static const struct rte_eth_conf port_conf_default = {
 	.rxmode = { .max_rx_pkt_len = ETHER_MAX_LEN }
 };
-
 
 /*
  * Initializes a given port using global settings and with the RX buffers
@@ -283,6 +92,9 @@ port_init(/*uint16_t port*/struct port_config *port)
 	for (int i = 0; i < ETHER_ADDR_LEN; i++) {
 		port->mac_addr.addr[i] = addr.addr_bytes[i];
 	}
+
+	if (!queue_init(&port->tx_queue) || !queue_init(&port->rx_queue))
+		return -1;
 	
 	/* Enable RX in promiscuous mode for the Ethernet port. */
 	rte_eth_promiscuous_enable(nport);
@@ -313,54 +125,25 @@ dpdk_init(void){
 	if (mbuf_pool == NULL) {
 		return -1;
 	}
-	queue_init();
   
 	return 0;
 }
 
 
-/* Wrapped a function to control port but not practically meaningful. It is expected that name will be assigned port number. */
-//struct port 
-//*port_open (const uint8_t num) {
-//	struct port *port;
-//	if ((port = malloc(sizeof(struct port))) == NULL) {
-//		perror("malloc");
-//		return NULL;
-//	}
-//	port->port_num = num;
-//	
-//	if (port_init(port->port_num) < 0){
-//		free(port);
-//		return NULL;
-//	}
-//  
-//	return port;
-//}
-//
-//void 
-//port_close (struct port *port) {
-//	printf("close port %u\n", port->port_num);
-//	rte_eth_dev_stop(port->port_num);
-//	rte_eth_dev_close(port->port_num);
-//	free(port);
-//}
-
 void
 rx_pkt (struct port_config *port) {
-	//uint16_t nb_ports;
 	uint16_t nport = port->port_num;
 	struct rte_mbuf *bufs[BURST_SIZE];
 	uint16_t nb_rx = 0;
-	//uint8_t  *p;
 
 	/* Recv burst of RX packets */
 	nb_rx = rte_eth_rx_burst(nport, 0, bufs, BURST_SIZE);
 	for (int i = 0; i < nb_rx ; i++) {
-		//uint8_t *p = rte_pktmbuf_mtod(bufs[i], uint8_t*);
 		uint32_t size = rte_pktmbuf_pkt_len(bufs[i]);
 		//p = rte_pktmbuf_mtod(bufs[i], uint8_t*);
 		//rte_hexdump(stdout, "", (const void *)p, size);
-		rx_queue_push(bufs[i], size);
+		//rx_queue_push(bufs[i], size);
+		queue_push(&port->rx_queue, bufs[i], size);
 	}
 }
 
@@ -369,13 +152,15 @@ tx_pkt (struct port_config *port) {
 	struct rte_mbuf *bufs[BURST_SIZE];
 	uint16_t nport = port->port_num;
 	int i, j, k;
-	uint32_t pop_num = tx_queue.num;
+	uint32_t pop_num = port->tx_queue.num;
 	uint16_t nb_tx;
+	struct queue_node *ret;
 	//uint8_t *p;
 
 	if (pop_num > 0) {
 		for (i = 0; i < pop_num; i++) {
-			bufs[i] = tx_queue_pop();
+			/*bufs[i] = */ret = queue_pop(&port->tx_queue);
+			bufs[i] = (struct rte_mbuf *)ret->data;
 		}
 		nb_tx = rte_eth_tx_burst(nport, 0, bufs, 1);
 		for (j = nb_tx; j < pop_num; j++) {

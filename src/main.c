@@ -44,7 +44,7 @@ int main(int argc, char **argv){
 	while(1) {
 		sleep(1);
 
-		if (rx_queue.num > 0)
+		if (port.rx_queue.num > 0)
 			rx_ether(&port);
 
 		struct rte_mbuf *mbuf;
@@ -52,7 +52,7 @@ int main(int argc, char **argv){
 
 		//tx_ether(mbuf, 0, &port, 0x0800, NULL, NULL);
 		uint32_t q = 0x0a000003;
-		//send_req(&q, &port);
+		send_req(&q, &port);
 	}
 
 	rte_eal_wait_lcore(1);

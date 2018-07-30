@@ -13,6 +13,7 @@
 #include"include/ethernet.h"
 #include"include/ip.h"
 #include"include/arp.h"
+#include"include/queue.h"
 
 ethernet_addr ether_broadcast = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 
@@ -80,7 +81,8 @@ void tx_ether(struct rte_mbuf *mbuf, uint32_t size, struct port_config *port, ui
 		}
 		mbuf->pkt_len = len;
 		mbuf->data_len = len;
-		tx_queue_push(mbuf, len);
+		//tx_queue_push(mbuf, len);
+		queue_push(&port->tx_queue, mbuf, len);
 		return;
 	}
 
@@ -114,15 +116,20 @@ void tx_ether(struct rte_mbuf *mbuf, uint32_t size, struct port_config *port, ui
 	}
 	mbuf->pkt_len = len;
 	mbuf->data_len = len;
-	tx_queue_push(mbuf, len);
+	//tx_queue_push(mbuf, len);
+	queue_push(&port->tx_queue, mbuf, len);
 	return;
 }
 
 void rx_ether(/*struct rte_mbuf *mbuf, uint32_t size*/struct port_config *port) {
 	uint32_t pop_size;
 	int rx_pop_num;
-
-	struct rte_mbuf *mbuf = rx_queue_pop(&pop_size);
+	struct rte_mbuf *mbuf;
+	struct queue_node *ret;
+	//struct rte_mbuf *mbuf = rx_queue_pop(&pop_size);
+	ret = queue_pop(&port->rx_queue);
+	mbuf = (struct rte_mbuf *)ret->data;
+	pop_size = ret->size;
 	printf("pop_size: %d\n", pop_size);
 	if (pop_size > 1052)
 		return;
