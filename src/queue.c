@@ -95,7 +95,6 @@ int main(void) {
 		int *var;// = i;
 		var = (int *)malloc(sizeof(int));
 		*var = i;
-//		printf("%p\n", var);
 		queue_push(&queue, var, sizeof(int));
 	}
 	for (int i = 0; i < 100; i++) {

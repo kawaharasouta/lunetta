@@ -25,4 +25,8 @@ struct queue_node {
 	struct queue_node *next;
 };
 
+int queue_init(struct queue_info *queue);
+void queue_push(struct queue_info *queue, void *data, uint32_t size);
+struct queue_node* queue_pop(struct queue_info *queue);
+
 #endif
