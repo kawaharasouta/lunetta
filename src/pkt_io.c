@@ -20,9 +20,6 @@
 
 #define QUEUE_SIZE 10000
 
-//struct queue_info tx_queue;
-//struct queue_info rx_queue;
-
 struct rte_mempool *mbuf_pool;
 static const struct rte_eth_conf port_conf_default = {
 	.rxmode = { .max_rx_pkt_len = ETHER_MAX_LEN }
@@ -93,6 +90,7 @@ port_init(/*uint16_t port*/struct port_config *port)
 		port->mac_addr.addr[i] = addr.addr_bytes[i];
 	}
 
+	/* queue init */
 	if (!queue_init(&port->tx_queue) || !queue_init(&port->rx_queue))
 		return -1;
 	
@@ -140,14 +138,11 @@ rx_pkt (struct port_config *port) {
 	nb_rx = rte_eth_rx_burst(nport, 0, bufs, BURST_SIZE);
 	for (int i = 0; i < nb_rx ; i++) {
 		uint32_t size = rte_pktmbuf_pkt_len(bufs[i]);
-		//p = rte_pktmbuf_mtod(bufs[i], uint8_t*);
-		//rte_hexdump(stdout, "", (const void *)p, size);
-		//rx_queue_push(bufs[i], size);
 		queue_push(&port->rx_queue, bufs[i], size);
 	}
 }
 
-size_t
+void
 tx_pkt (struct port_config *port) {
 	struct rte_mbuf *bufs[BURST_SIZE];
 	uint16_t nport = port->port_num;
@@ -155,11 +150,10 @@ tx_pkt (struct port_config *port) {
 	uint32_t pop_num = port->tx_queue.num;
 	uint16_t nb_tx;
 	struct queue_node *ret;
-	//uint8_t *p;
 
 	if (pop_num > 0) {
 		for (i = 0; i < pop_num; i++) {
-			/*bufs[i] = */ret = queue_pop(&port->tx_queue);
+			ret = queue_pop(&port->tx_queue);
 			bufs[i] = (struct rte_mbuf *)ret->data;
 		}
 		nb_tx = rte_eth_tx_burst(nport, 0, bufs, 1);
@@ -167,40 +161,7 @@ tx_pkt (struct port_config *port) {
 			rte_pktmbuf_free(bufs[j]);
 		}
 	}
- 
-//	for (i = 0; i < BURST_SIZE; i++){
-//		//bufs[i] = (struct rte_mbuf *)malloc(sizeof(struct rte_mbuf *));
-//		bufs[i] = tx_queue_pop();
-//		if (bufs[i] == NULL){
-//			break;
-//		}
-//		//p = rte_pktmbuf_mtod(bufs[i], uint8_t*);
-//		uint32_t size = rte_pktmbuf_pkt_len(bufs[i]);
-//		//rte_hexdump(stdout, "", (const void *)p, size);
-//
-//	}
-	/* Send burst of TX packets */
-	//bufs[0] = rte_pktmbuf_alloc(mbuf_pool);
-	//bufs[0]->pkt_len = length;
-	//bufs[0]->data_len = length;
-	//bufs[0]->port = nport;
-	//bufs[0]->packet_type = 1;
-  //
-	//p = rte_pktmbuf_mtod(bufs[0], uint8_t*);
-	//memcpy(p, buffer, length);
-  
-#if 0
-	if (num_tx < i){
-		for (uint16_t j = num_tx; j < i; j++){
-			rte_pktmbuf_free(bufs[j]);
-		}
-	}
-#endif
-	//if (num_tx > 0) {
-	//	return num_tx;
-	//}
-	//return -1;
-	return 0;
+	return;
 }
 
 

@@ -13,7 +13,6 @@
 #define ARP_TABLE_SIZE 4096
 
 struct arp_entry {
-	//ip_addr_t pa;
 	uint32_t pa;
 	ethernet_addr ha;
 	time_t timestamp;
