@@ -10,7 +10,7 @@ struct allocate_pool {
 	struct queue_node *head;
 	struct queue_node *tail;
 	struct queue_node *next;
-} allocate_pool;
+};
 
 struct queue_info{
 	int num;
