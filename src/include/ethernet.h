@@ -15,6 +15,11 @@ typedef struct {
 	uint8_t addr[ETHER_ADDR_LEN];
 } __attribute__ ((packed)) ethernet_addr;
 
+struct ether_port {
+	uint16_t port_num;
+	ethernet_addr mac_addr;
+};
+
 struct ethernet_hdr {
 	ethernet_addr dest;
 	ethernet_addr src;

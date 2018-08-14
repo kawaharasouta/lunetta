@@ -30,6 +30,8 @@ int main(int argc, char **argv){
 	arp_init(&port);
 
 	print_mac_addr(&port.mac_addr);
+
+	struct ether_port *ether_port;
 	
 	uint16_t nb_ports;
 	uint16_t nport = port.port_num;

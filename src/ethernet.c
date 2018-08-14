@@ -15,7 +15,23 @@
 #include"include/arp.h"
 #include"include/queue.h"
 
+#define ETHER_PORT_MAX_NUM 1
+
+struct ether_port ports[ETHER_PORT_MAX_NUM];
+
 ethernet_addr ether_broadcast = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+
+int ethernet_init(struct port_config *port, uint16_t num) {
+	if (num > ETHER_PORT_MAX_NUM)
+		num = ETHER_PORT_MAX_NUM;
+	for (int i = 0; i < ETHER_PORT_MAX_NUM; i++) {
+		ports[i].port_num = port->port_num;
+		ports[i].mac_addr = port->mac_addr;
+	}
+}
+struct ether_port* get_port_pointer() {
+	return ports;
+}
 
 void print_mac_addr(ethernet_addr *addr) {
 	printf("%02x:%02x:%02x:%02x:%02x:%02x\n",
