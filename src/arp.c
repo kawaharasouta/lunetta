@@ -217,9 +217,6 @@ void send_rep(const uint32_t *tpa, const ethernet_addr *tha, struct port_config 
 	tx_ether(mbuf, sizeof(struct arp_ether), port, ETHERTYPE_ARP, tpa, NULL);
 }
 
-void tx_arp() {
-
-}
 
 void rx_arp(uint8_t *packet, uint32_t size, struct port_config *port) {
 	struct arp_ether *hdr;

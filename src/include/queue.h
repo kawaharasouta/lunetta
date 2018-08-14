@@ -3,7 +3,7 @@
 
 //#include<pthread.h>
 
-#define QUEUE_SIZE 10000
+#define QUEUE_SIZE 100
 
 struct allocate_pool {
 	uint16_t num;

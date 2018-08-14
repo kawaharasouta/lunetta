@@ -15,6 +15,7 @@ int allocate_pool_brk(struct queue_info *queue) {
 }
 
 struct queue_node* allocate_queue_node(struct queue_info *queue) {
+//#if 0
   struct queue_node *ret = queue->pool.next;
 
   if (queue->pool.next == queue->pool.tail)
@@ -23,6 +24,7 @@ struct queue_node* allocate_queue_node(struct queue_info *queue) {
     queue->pool.next++;
 
   return ret;
+//#endif
 }
 
 int queue_init(struct queue_info *queue) {
@@ -33,10 +35,9 @@ int queue_init(struct queue_info *queue) {
 }
 
 void queue_push(struct queue_info *queue, void *data, uint32_t size) {
-	if (data == NULL)
+	if (!data || queue->num >= QUEUE_SIZE) 
     return;
 
-  queue->num += 1;
   struct queue_node *node = allocate_queue_node(queue);
   node->data = data;
   //!it is really wrong
@@ -50,23 +51,38 @@ void queue_push(struct queue_info *queue, void *data, uint32_t size) {
   }
   queue->tail->next = node;
   queue->tail = node;
+	//if (queue->tail) {
+	//	queue->tail->next = node;
+	//}
+	//queue->tail = node;
+	//if (!queue->head) {
+	//	queue->head = node;
+	//}
 
   return;
 }
 
 struct queue_node* queue_pop(struct queue_info *queue) {
-	if (queue->head == NULL) 
+	if (!queue->head) {
+		//if (queue->tail) {
+		//	queue->head = queue->tail;
+		//	queue->num = 1;
+		//}
 		return NULL;
+	}
 	
 	queue->num -= 1;
 	struct queue_node *ret = queue->head; 
 	queue->head = queue->head->next;
+	//if (!queue->head) {
+	//	queue->tail = NULL;
+	//}
 	return ret;
 }
 
 
 
-#ifdef QUEUE_DEBUG
+#ifdef DEBUG_QUEUE
 
 int main(void) {
 	struct queue_info queue;

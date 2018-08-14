@@ -42,7 +42,17 @@ include $(RTE_SDK)/mk/rte.vars.mk
 APP = main
 
 # all source are stored in SRCS-y
-SRCS-y := queue.c pkt_io.c ethernet.c ip.c main.c lunetta.c arp.c
+#SRCS-y := queue.c pkt_io.c ethernet.c ip.c main.c lunetta.c arp.c
+
+#src
+ifeq ($(DEBUG), PKT_IO)
+  #echo DEBUG PKT_IO.
+  SRCS-y := queue.c pkt_io.c lunetta.c
+  CFLAGS += -DDEBUG_PKT_IO
+else
+  #echo MAIN.
+  SRCS-y := queue.c pkt_io.c ethernet.c ip.c main.c lunetta.c arp.c
+endif
 
 CFLAGS += -g -lpthread -pthread 
 #CFLAGS += $(WERROR_FLAGS)

@@ -11,14 +11,12 @@
 #include <rte_mbuf.h>
 #include <rte_hexdump.h>
 #include <rte_ether.h>
-#include<pthread.h>
+//#include<pthread.h>
 
 #include"include/lunetta.h"
 #include"include/pkt_io.h"
 #include"include/ethernet.h"
 #include"include/queue.h"
-
-#define QUEUE_SIZE 10000
 
 struct rte_mempool *mbuf_pool;
 static const struct rte_eth_conf port_conf_default = {
@@ -93,6 +91,10 @@ port_init(/*uint16_t port*/struct port_config *port)
 	/* queue init */
 	if (!queue_init(&port->tx_queue) || !queue_init(&port->rx_queue))
 		return -1;
+
+	/* pthread mutex init */
+	pthread_mutex_init(&port->tx_mutex, NULL);
+	pthread_mutex_init(&port->rx_mutex, NULL);
 	
 	/* Enable RX in promiscuous mode for the Ethernet port. */
 	rte_eth_promiscuous_enable(nport);
@@ -136,10 +138,12 @@ rx_pkt (struct port_config *port) {
 
 	/* Recv burst of RX packets */
 	nb_rx = rte_eth_rx_burst(nport, 0, bufs, BURST_SIZE);
+	pthread_mutex_lock(&port->rx_mutex);
 	for (int i = 0; i < nb_rx ; i++) {
 		uint32_t size = rte_pktmbuf_pkt_len(bufs[i]);
 		queue_push(&port->rx_queue, bufs[i], size);
 	}
+	pthread_mutex_unlock(&port->rx_mutex);
 }
 
 void
@@ -152,10 +156,12 @@ tx_pkt (struct port_config *port) {
 	struct queue_node *ret;
 
 	if (pop_num > 0) {
+		pthread_mutex_lock(&port->tx_mutex);
 		for (i = 0; i < pop_num; i++) {
 			ret = queue_pop(&port->tx_queue);
 			bufs[i] = (struct rte_mbuf *)ret->data;
 		}
+		pthread_mutex_unlock(&port->tx_mutex);
 		nb_tx = rte_eth_tx_burst(nport, 0, bufs, 1);
 		for (j = nb_tx; j < pop_num; j++) {
 			rte_pktmbuf_free(bufs[j]);
@@ -165,41 +171,13 @@ tx_pkt (struct port_config *port) {
 }
 
 
-//static/* __attribute__((noreturn))*/ void
-//void lcore_txmain(struct port *port) {
-//	while (1) {
-//		tx_pkt(port);
-//	}
-//}
-//void lcore_rxmain(struct port *port) {
-//	while (1) {
-//		rx_pkt(port);
-//	}
-//}
-
-///*static */int launch_lcore_tx(/*__attribute__ ((unused)) */void *arg) {
-//	unsigned lcore_id = rte_lcore_id();
-//	printf("lcore%u launched\n",lcore_id);
-//
-//	lcore_txmain((struct port *)arg);
-//	return 0;
-//}
-///*static */int launch_lcore_rx(/*__attribute__ ((unused)) */void *arg) {
-//	unsigned lcore_id = rte_lcore_id();
-//	printf("lcore%u launched\n",lcore_id);
-//
-//	lcore_rxmain((struct port *)arg);
-//	return 0;
-//}
-
 /** 1lcore per 1port **/
 void lcore_rxtxmain(struct port_config *port) {
 	printf("lcore_rxtxmain");
 	printf("port->port_num: %u\n", port->port_num);
 	while (1) {
-		sleep(1);
+		//printf("*");
 		rx_pkt(port);
-		//sleep(1);
 		tx_pkt(port);
 	}
 }
@@ -211,203 +189,44 @@ int launch_lcore_rxtx(void *arg) {
 	return 0;
 }
 
+#ifdef DEBUG_PKT_IO
+int main(void) {
+	if (lunetta_init() == -1) {
+		fprintf(stderr, "lunetta_init error.\n");
+    exit(1);
+  }
 
-/* test pthread */
-void *rxtx_thread(void *arg) {
+  struct port_config port;
+  port.port_num = 0;
+  port_init(&port);
+  port_setup(&port);
+  //arp_init(&port);
+
+
+	rte_eal_remote_launch(launch_lcore_rxtx, (void *)&port, 1);
+
+	int ret;
+	int rx_pop_num;
+	/* ethernet */
 	while (1) {
-		sleep(1);
-		rx_pkt((struct port_config *)arg);
-		//sleep(1);
-		tx_pkt((struct port_config *)arg);
-	}
-}
-
-
-
-
-#if 0
-//!!!!!!!!!!!!!!comment out main
-
-
-#if 1
-int main() {
-	dpdk_init();
-
-	struct port *port;
-	port = port_open(0);
-
-	uint16_t nb_ports;
-	uint16_t nport = port->port_num;
-	struct rte_mbuf *bufs[BURST_SIZE];
-	struct rte_mbuf *tbufs[BURST_SIZE];
-	uint16_t nb_rx;
-	uint16_t nb_tx;
-
-	printf("launch from master\n");
-	//rte_eal_remote_launch(launch_lcore_rx, (void *)port, 1);
-	//rte_eal_remote_launch(launch_lcore_tx, (void *)port, 2);
-	rte_eal_remote_launch(launch_lcore_rxtx, (void *)port, 1);
-
-	while(1) {
-		sleep(1);
-		//printf("***\n");
-		int j;
-		uint32_t pop_size;
-		int rx_pop_num;
-		//pthread_mutex_lock(&tx_queue.mutex);
-		//pthread_mutex_lock(&rx_queue.mutex);
-		rx_pop_num = rx_queue.num;
-		/*if (rx_pop_num > 0) {
-			printf("rx_pop_num > 0\n");
-		}*/
-		for (j = 0; j < rx_pop_num; j++){
-			struct rte_mbuf *mbuf;// = (struct rte_mbuf *)malloc(sizeof(struct rte_mbuf *));
-			mbuf = rx_queue_pop(&pop_size);
-			if (pop_size != 60) {
-				printf("pop_size: %u\n", pop_size);
-				//continue;
+		rx_pop_num = port.rx_queue.num;
+		for (int i = 0; i < rx_pop_num; i++) {
+			pthread_mutex_lock(&port.rx_mutex);
+			struct queue_node *node = queue_pop(&port.rx_queue);
+			pthread_mutex_unlock(&port.rx_mutex);
+			if (!node) {
+				printf("!node\n");
+				//queue_init(&port.rx_queue);
+				//rx_pop_num = 0;
+				continue;
 			}
-			uint8_t *p = rte_pktmbuf_mtod(mbuf, uint8_t*);
-			//uint32_t size = rte_pktmbuf_pkt_len(bufs[j]);
-			rte_hexdump(stdout, "", (const void *)p, pop_size);
-	//		p = NULL;
-			//pthread_mutex_lock(&tx_queue.mutex);
-			tx_queue_push(mbuf, pop_size);
-			//pthread_mutex_unlock(&tx_queue.mutex);
+			if (node->size < 1512) {
+				uint8_t *p = rte_pktmbuf_mtod((struct rte_mbuf *)node->data, uint8_t*);
+				rte_hexdump(stdout, "", (const void *)p, node->size);
+			}
+			rte_pktmbuf_free((struct rte_mbuf *)node->data);
 		}
-		//pthread_mutex_unlock(&tx_queue.mutex);
-		//pthread_mutex_unlock(&rx_queue.mutex);
 	}
-
-
 	rte_eal_wait_lcore(1);
-	//rte_eal_wait_lcore(2);
-
-	pthread_mutex_destroy(&tx_queue.mutex);
-	pthread_mutex_destroy(&rx_queue.mutex);
-
-	return 0;
 }
-
-#else
-int main() {
-	dpdk_init();
-
-	struct port *port;
-	port = port_open(0);
-
-	uint16_t nb_ports;
-	uint16_t nport = port->port_num;
-	struct rte_mbuf *bufs[BURST_SIZE];
-	struct rte_mbuf *tbufs[BURST_SIZE];
-	uint16_t nb_rx;
-	uint16_t nb_tx;
-	//uint8_t *p;
-#if 1
-	pthread_t thread;
-
-	pthread_create(&thread, NULL, rxtx_thread, (void *)port);
-
-	while (1) {
-		//printf("***\n");
-		sleep(1);
-		int j;
-		uint32_t pop_size;
-		//pthread_mutex_lock(&rx_queue.mutex);
-		int rx_pop_num = rx_queue.num;
-		for (j = 0; j < rx_pop_num; j++){
-			struct rte_mbuf *mbuf;// = (struct rte_mbuf *)malloc(sizeof(struct rte_mbuf *));
-			mbuf = rx_queue_pop(&pop_size);
-			uint8_t *p = rte_pktmbuf_mtod(mbuf, uint8_t*);
-			//uint32_t size = rte_pktmbuf_pkt_len(bufs[j]);
-			rte_hexdump(stdout, "", (const void *)p, pop_size);
-			
-			//pthread_mutex_lock(&tx_queue.mutex);
-			tx_queue_push(mbuf, pop_size);
-			//pthread_mutex_unlock(&tx_queue.mutex);
-		}
-		//pthread_mutex_unlock(&rx_queue.mutex);
-
-	}
-
-#else
-	for (;;){
-#if 1
-		rx_pkt(port);
-#else
-		nb_rx = 0;
-		/* Recv burst of RX packets */
-		nb_rx = rte_eth_rx_burst(nport, 0, bufs, BURST_SIZE);
-		int i, j, k;
-		uint32_t pop_size;
-		for (i = 0; i < nb_rx ; i++) {
-			uint8_t *pp = rte_pktmbuf_mtod(bufs[i], uint8_t*);
-			uint32_t size = rte_pktmbuf_pkt_len(bufs[i]);
-
-			//rte_hexdump(stdout, "", (const void *)pp, size);
-			rx_queue_push(bufs[i], size);
-		}
-#endif
-		//if (nb_rx > 0)
-			//printf("-----------\n");
-		//}
-		int j;
-		uint32_t pop_size;
-		int rx_pop_num = rx_queue.num;
-		for (j = 0; j < rx_pop_num; j++){
-			struct rte_mbuf *mbuf;// = (struct rte_mbuf *)malloc(sizeof(struct rte_mbuf *));
-			mbuf = rx_queue_pop(&pop_size);
-			uint8_t *p = rte_pktmbuf_mtod(mbuf, uint8_t*);
-			if (pop_size != 60){
-				printf("size: %u\n", pop_size);
-			}
-			//uint32_t size = rte_pktmbuf_pkt_len(bufs[j]);
-			//rte_hexdump(stdout, "", (const void *)p, pop_size);
-	//		p = NULL;
-
-			tx_queue_push(mbuf, pop_size);
-//
-//			//struct rte_mbuf **tx_mbuf = (struct rte_mbuf **)malloc(sizeof(struct rte_mbuf *) * );
-//			struct rte_mbuf *tx_mbuf;
-//			//tx_mbuf[0] = (struct rte_mbuf *)malloc(sizeof(struct rte_mbuf *));
-//			tx_mbuf = tx_queue_pop();
-//			nb_tx = rte_eth_tx_burst(nport, 0, &tx_mbuf, 1);
-//
-//			rte_pktmbuf_free(mbuf);
-//			rte_pktmbuf_free(tx_mbuf);
-		}
-		//if (nb_rx > 0)
-			//printf("==========\n");
-#if 1
-		tx_pkt(port);
-#else
-		int tx_pop_num = tx_queue.num;
-		if (tx_pop_num > 0) {
-			for (k = 0; k < tx_pop_num; k++){
-				tbufs[k] = tx_queue_pop();
-			}
-			nb_tx = rte_eth_tx_burst(nport, 0, tbufs, 1);
-			for (int l = 0; l < tx_pop_num; l++){
-				rte_pktmbuf_free(tbufs[l]);
-			}
-#endif
-//			if ((tx_pop_num > nb_tx)){
-//				for (int t = nb_tx; t < tx_pop_num; t++){
-//					rte_pktmbuf_free(bufs[j]);
-//				}
-//			}
-//		}
-
-
-		//rx_pkt(port);
-		//tx_pkt(port);
-	}
-#endif
-	pthread_join(thread, NULL);
-	return 0;
-}
-#endif
-
-
-//!!!!!!!!!!!!!!!! comment out main
 #endif

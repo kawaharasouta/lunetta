@@ -13,10 +13,7 @@
 void print_ip_addr(uint32_t *addr) {
 	uint8_t *ad;
 	ad = (uint8_t *)addr;
-
-
 	printf("%u.%u.%u.%u\n", *ad, *(ad + 1), *(ad + 2), *(ad + 3));
-
 	return;
 }
 
