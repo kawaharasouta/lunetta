@@ -58,6 +58,7 @@ void queue_push(struct queue_info *queue, void *data, uint32_t size) {
 	//if (!queue->head) {
 	//	queue->head = node;
 	//}
+	queue->num += 1;
 
   return;
 }
